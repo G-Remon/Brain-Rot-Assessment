@@ -4,7 +4,9 @@ import { createRoot } from 'react-dom/client'
 import { Activity, ArrowLeft, ArrowRight, BookOpen, Check, CheckCircle2, ChevronLeft, Clock3, Copy, Download, ExternalLink, Heart, Lightbulb, LockKeyhole, Menu, Moon, RotateCcw, Share2, ShieldCheck, Smartphone, Sparkles, Target, X, Zap, BrainCircuit, Play, UserRound } from 'lucide-react'
 import { domains, questions, options, domainScore, totalScore, getBand, recommendBooks, sources, type AnswerMap } from './data'
 import { buildPersonalReport } from './personalization'
-import { AccountPage, AuthPage, type AuthMode } from './AuthPage'
+import { AuthPage, type AuthMode } from './AuthPage'
+import { AccountPage } from './AccountPage'
+import { snapshotKey, validatedAssessment, type SavedAssessment } from './assessment-history'
 import { supabase } from './supabase'
 import { clearRecoveryRedirect, isRecoveryRedirect } from './auth-urls'
 import './style.css'
@@ -113,10 +115,25 @@ function App() {
   const booksForYou=useMemo(()=>recommendBooks(answers),[answers])
   const mainAreas=ranked.filter(d=>d.score>=5).slice(0,3)
   const allAnswered=answered===questions.length
+  const currentCandidate = allAnswered ? validatedAssessment(answers) : null
+  const guestCandidate = user ? validatedAssessment(readStored('guest')) : null
   function openAccount() {
     if (user) setScreen('account')
     else { setAuthMode('login'); setScreen('auth') }
     setShowMenu(false)
+  }
+  function viewSavedAssessment(snapshot: SavedAssessment) {
+    const savedAnswers = validatedAssessment(snapshot.answers)
+    if (!savedAnswers || snapshot.user_id !== user?.id) {
+      setFeedback('تعذّر فتح النتيجة القديمة. جرّب تحديث السجل.')
+      return
+    }
+    if (Object.keys(answers).length && snapshotKey(answers) !== snapshotKey(savedAnswers) &&
+      !window.confirm('فتح النتيجة القديمة هيستبدل إجابات اختبارك الحالي وخطة متابعتك على الجهاز فقط. النسخ المحفوظة في حسابك هتفضل زي ما هي. تكمل؟')) return
+    setAnswers(savedAnswers)
+    setCompleted({})
+    setScreen('results')
+    setFeedback('دي نتيجة محفوظة من اختبار سابق. تقدر تشوف تحليل إجاباتك بالكامل.')
   }
   function startQuiz() {
     const missing=questions.findIndex(q=>answers[q.id]===undefined)
@@ -229,7 +246,7 @@ function App() {
         </section>}
         {screen==='results' && allAnswered && <div className="container results-page">
           <div className="results-intro"><span className="section-kicker">خلصت! عاش إنك كملت 👏</span><h1>دي صورتك الحالية...<br/><span className="highlight">مش حكم عليك.</span></h1><p>النتيجة بتلخّص إجاباتك عن آخر 14 يوم، مش بتحدد ذكاءك أو «نسبة ضرر دماغك».</p></div>
-          <div className="result-shortcuts"><button onClick={()=>document.getElementById('solutions')?.scrollIntoView({behavior:'smooth'})}>شوف الحلول اللي تناسبك <ArrowLeft size={16}/></button><button onClick={()=>document.getElementById('weekly-plan')?.scrollIntoView({behavior:'smooth'})}>خطة الـ14 يوم <ChevronLeft size={16}/></button></div>
+          <div className="result-shortcuts"><button onClick={()=>document.getElementById('solutions')?.scrollIntoView({behavior:'smooth'})}>شوف الحلول اللي تناسبك <ArrowLeft size={16}/></button><button onClick={()=>document.getElementById('weekly-plan')?.scrollIntoView({behavior:'smooth'})}>خطة الـ14 يوم <ChevronLeft size={16}/></button><button className="result-save-shortcut" onClick={openAccount}><LockKeyhole size={16}/>{user?'احفظ نتيجتك في حسابك':'احفظ نتيجتك بحساب مجاني'}</button></div>
           <div className="results-grid">
             <article className="score-card"><span className="card-eyebrow">مجموع الإجابات</span><div className="score-ring" style={{'--amount':`${score/120*100}%`} as CSSProperties}><div><strong>{score}</strong><span>من 120</span></div></div><div className="band-pill">{band.title}</div><p>{band.note}</p><small>تصنيفات وصفية من تصميم الموقع، مش حدود تشخيصية معتمدة.</small></article>
             <article className="breakdown-card"><div className="card-heading"><h2>تفصيل المحاور</h2><span>من 20 لكل محور</span></div>{ranked.map(d=><div className="score-line" key={d.id}><div className="score-name"><span><IconFor name={d.icon} size={17}/>{d.title}</span><b>{d.score}<small>/20</small></b></div><div className="bar-track"><span style={{width:`${d.score*5}%`}} className={d.score>=12?'bar-high':d.score>=7?'bar-mid':'bar-low'}/></div></div>)}</article>
@@ -356,7 +373,7 @@ function App() {
         </div>}
         {screen==='results' && !allAnswered && <section className="container empty-result"><h1>لسه عندك شوية أسئلة</h1><p>كمّل الاختبار الأول عشان يطلعلك التقرير.</p><button className="btn btn-primary" onClick={startQuiz}>كمّل الأسئلة <ArrowLeft size={18}/></button></section>}
         {screen==='auth' && <AuthPage initialMode={authMode} onDone={()=>setScreen('account')} onBack={()=>setScreen('home')}/>}
-        {screen==='account' && (user ? <AccountPage user={user} onBack={()=>setScreen('home')}/> : <AuthPage onDone={()=>setScreen('account')} onBack={()=>setScreen('home')}/>)}
+        {screen==='account' && (user ? <AccountPage user={user} onBack={()=>setScreen('home')} onViewSaved={viewSavedAssessment} currentCandidate={currentCandidate} guestCandidate={guestCandidate}/> : <AuthPage onDone={()=>setScreen('account')} onBack={()=>setScreen('home')}/>)}
         {screen==='science' && <div className="container science-page">
           <span className="section-kicker">من الآخر، وبوضوح</span><h1>الموقع ده مبني على إيه؟</h1>
           <p className="science-lead">مصطلح «تعفن الدماغ» أو Brain Rot تعبير منتشر، مش اسم مرض أو تشخيص طبي. عشان كده هنا بنقيّم عادات وسلوكيات بيبلغ عنها الشخص بنفسه، مش بنقيس صحة دماغه.</p>
@@ -364,7 +381,7 @@ function App() {
             <div className="books-heading"><span className="section-kicker">منين جت أفكار الحلول؟</span><h2 id="books-title">كتب استلهمنا منها خطوات بسيطة</h2><p>اختارنا أفكار عملية من الكتب دي عشان تساعدك في التركيز وتنظيم وقتك والتعلّم بشكل أفضل.</p></div>
             <div className="books-grid">{books.map(book=><article className="book-card" key={book.title}><div className="book-visual"><span>{book.mark}</span><BookOpen size={30}/></div><div className="book-detail"><span className="book-tag">{book.tag}</span><h3 lang="en" dir="ltr">{book.title}</h3><strong>{book.subtitle}</strong><small lang="en" dir="ltr">{book.author}</small><p>{book.description}</p></div></article>)}</div>
           </section>
-          <div className="science-grid"><div className="science-info"><Target/><h3>إيه اللي بنقيسه؟</h3><p>تصورك الشخصي عن التركيز، والتصفح، والملل، والتعلّم، والنوم، وتأثير الاستخدام على يومك خلال آخر 14 يوم.</p></div><div className="science-info"><Activity/><h3>إزاي بتتحسب النتيجة؟</h3><p>كل إجابة من 0 إلى 4. خمس أسئلة لكل محور (0–20)، والإجمالي 0–120. كل ما النتيجة زادت، الصعوبات المبلّغ عنها زادت. دي مش نسبة مئوية لتلف الدماغ.</p></div><div className="science-info"><Heart/><h3>إزاي بنقترح حلول؟</h3><p>بنبدأ بالجوانب اللي جابت درجات أعلى ونختار خطوات عملية، مع روابط للمراجع. النتيجة مش بتقدر تحدد أسباب المشكلة أو تستبعد أي حالة طبية.</p></div><div className="science-info"><LockKeyhole/><h3>خصوصيتك</h3><p>إجاباتك محفوظة محليًا في متصفحك لاستكمال الاختبار. مفيش حساب ولا سيرفر بيستقبل الإجابات في النسخة دي. المشاركة بتحصل فقط لو إنت اخترتها.</p></div></div>
+          <div className="science-grid"><div className="science-info"><Target/><h3>إيه اللي بنقيسه؟</h3><p>تصورك الشخصي عن التركيز، والتصفح، والملل، والتعلّم، والنوم، وتأثير الاستخدام على يومك خلال آخر 14 يوم.</p></div><div className="science-info"><Activity/><h3>إزاي بتتحسب النتيجة؟</h3><p>كل إجابة من 0 إلى 4. خمس أسئلة لكل محور (0–20)، والإجمالي 0–120. كل ما النتيجة زادت، الصعوبات المبلّغ عنها زادت. دي مش نسبة مئوية لتلف الدماغ.</p></div><div className="science-info"><Heart/><h3>إزاي بنقترح حلول؟</h3><p>بنبدأ بالجوانب اللي جابت درجات أعلى ونختار خطوات عملية، مع روابط للمراجع. النتيجة مش بتقدر تحدد أسباب المشكلة أو تستبعد أي حالة طبية.</p></div><div className="science-info"><LockKeyhole/><h3>خصوصيتك</h3><p>إجاباتك محفوظة محليًا في متصفحك لاستكمال الاختبار. إجاباتك بتفضل على جهازك، إلا لو سجّلت دخول واخترت بنفسك تحفظ النتيجة في حسابك. مشاركة النتيجة برضه باختيارك.</p></div></div>
           <div className="sources-section"><div className="section-top"><span className="section-kicker">القراءة والمصادر</span><h2>دراسات ومصادر للنصايح</h2><p>ومع الكتب، بنرجع لأبحاث ومصادر موثوقة تدعم بعض التوصيات. مش معنى كده إن أسئلة الاختبار نفسها مقياس معتمد.</p></div>{sources.map(s=><a className="source-row" href={s.url} target="_blank" rel="noopener noreferrer" key={s.id}><div className="source-icon"><BookOpen size={20}/></div><div><strong>{s.title}</strong><small>{s.by}</small><p>{s.summary}</p></div><ExternalLink size={17}/></a>)}</div>
           <div className="science-bottom"><h2>خلينا نفهم عاداتك من غير أحكام.</h2><button className="btn btn-primary" onClick={startQuiz}>ابدأ الاختبار <ArrowLeft size={18}/></button></div>
         </div>}
