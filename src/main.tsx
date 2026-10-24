@@ -191,7 +191,7 @@ function App() {
           </nav>
           <div className="nav-actions">
             <button className="nav-start" onClick={startQuiz}>{answered>0 && !allAnswered?'كمّل اختبارك':'ابدأ الاختبار'} <ArrowLeft size={17}/></button>
-            <button className="nav-account" onClick={openAccount} aria-label={user?'حسابي':'تسجيل الدخول'}><UserRound size={17}/><span>{user?'حسابي':'دخول / حساب'}</span></button>
+            <button className="nav-account" onClick={openAccount} aria-label={user?'حسابي':'تسجيل الدخول'}><UserRound size={17}/><span>{user?'حسابي':'دخول بـ Google'}</span></button>
             <button className="menu-toggle" onClick={()=>setShowMenu(p=>!p)} aria-label={showMenu?'قفل القائمة':'افتح القائمة'}>{showMenu?<X/>:<Menu/>}</button>
           </div>
         </div>
@@ -244,7 +244,7 @@ function App() {
         </section>}
         {screen==='results' && allAnswered && <div className="container results-page">
           <div className="results-intro"><span className="section-kicker">خلصت! عاش إنك كملت 👏</span><h1>دي صورتك الحالية...<br/><span className="highlight">مش حكم عليك.</span></h1><p>النتيجة بتلخّص إجاباتك عن آخر 14 يوم، مش بتحدد ذكاءك أو «نسبة ضرر دماغك».</p></div>
-          <div className="result-shortcuts"><button onClick={()=>document.getElementById('solutions')?.scrollIntoView({behavior:'smooth'})}>شوف الحلول اللي تناسبك <ArrowLeft size={16}/></button><button onClick={()=>document.getElementById('weekly-plan')?.scrollIntoView({behavior:'smooth'})}>خطة الـ14 يوم <ChevronLeft size={16}/></button><button className="result-save-shortcut" onClick={openAccount}><LockKeyhole size={16}/>{user?'احفظ نتيجتك في حسابك':'احفظ نتيجتك بحساب مجاني'}</button></div>
+          <div className="result-shortcuts"><button onClick={()=>document.getElementById('solutions')?.scrollIntoView({behavior:'smooth'})}>شوف الحلول اللي تناسبك <ArrowLeft size={16}/></button><button onClick={()=>document.getElementById('weekly-plan')?.scrollIntoView({behavior:'smooth'})}>خطة الـ14 يوم <ChevronLeft size={16}/></button><button className="result-save-shortcut" onClick={openAccount}><LockKeyhole size={16}/>{user?'احفظ نتيجتك في حسابك':'احفظ نتيجتك بحساب Google مجاني'}</button></div>
           <div className="results-grid">
             <article className="score-card"><span className="card-eyebrow">مجموع الإجابات</span><div className="score-ring" style={{'--amount':`${score/120*100}%`} as CSSProperties}><div><strong>{score}</strong><span>من 120</span></div></div><div className="band-pill">{band.title}</div><p>{band.note}</p><small>تصنيفات وصفية من تصميم الموقع، مش حدود تشخيصية معتمدة.</small></article>
             <article className="breakdown-card"><div className="card-heading"><h2>تفصيل المحاور</h2><span>من 20 لكل محور</span></div>{ranked.map(d=><div className="score-line" key={d.id}><div className="score-name"><span><IconFor name={d.icon} size={17}/>{d.title}</span><b>{d.score}<small>/20</small></b></div><div className="bar-track"><span style={{width:`${d.score*5}%`}} className={d.score>=12?'bar-high':d.score>=7?'bar-mid':'bar-low'}/></div></div>)}</article>
