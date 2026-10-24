@@ -390,3 +390,85 @@
   .footer-credit{text-align:center;width:100%;max-width:none;align-items:center}
 }
 @media(max-width:360px){.auth-card{padding:24px 15px}}
+
+/* Account dashboard: saved assessment history, privacy and consent */
+.account-dashboard{padding-top:25px;padding-bottom:90px;max-width:1050px}
+.account-dashboard .auth-back{margin-bottom:12px}
+.account-banner{display:flex;align-items:center;gap:18px;background:linear-gradient(120deg,#123e48,#17465b 62%,#1f5e65);color:#fff;border-radius:24px;padding:32px;box-shadow:0 18px 45px #11465c17}
+.account-avatar{display:flex;align-items:center;justify-content:center;min-width:64px;height:64px;border-radius:18px;background:#ffffff22;color:#b3f3d9}
+.account-banner-copy{flex:1;min-width:0}
+.account-banner-copy .section-kicker{color:#a2e8ce}
+.account-banner-copy h1{margin:5px 0;font-size:clamp(22px,3vw,28px);font-weight:900;line-height:1.6;color:#fff;overflow-wrap:anywhere}
+.account-banner-copy p{color:#d3e5e8;line-height:1.9;font-size:12px}
+.account-email{display:flex;align-items:center;gap:7px;color:#d9eae9;font-size:12px;margin-top:10px}
+.account-email span{overflow-wrap:anywhere;text-align:right}
+.account-email svg:last-child{color:#96e9c8}
+.account-banner-icon{display:flex;align-items:center;flex-direction:column;gap:7px;color:#c2efdc;font-size:11px;font-weight:800;white-space:nowrap}
+.account-overview-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:18px 0 35px}
+.account-stat{display:flex;align-items:flex-start;flex-direction:column;gap:6px;background:#fff;border:1px solid #e4eded;border-radius:16px;padding:19px}
+.account-stat svg{color:#1d9b81}
+.account-stat span{color:#6c8893;font-size:11px;font-weight:700}
+.account-stat strong{font-size:27px;color:#174058;line-height:1.2;font-weight:900;direction:ltr}
+.account-stat small{font-size:9px;line-height:1.7;color:#8298a1}
+.account-save-section,.account-history-section{background:#fff;border:1px solid #e4ecee;border-radius:21px;padding:27px;margin-bottom:22px}
+.account-save-section{background:linear-gradient(130deg,#f7fffb,#fff 68%)}
+.account-section-head .section-kicker{font-size:10px}
+.account-section-head h2{margin:5px 0;font-size:20px;line-height:1.6;color:#1a4255;font-weight:900}
+.account-section-head p{font-size:12px;color:#718b97;line-height:1.9;margin:0}
+.account-save-actions{display:flex;gap:11px;flex-wrap:wrap;margin-top:17px}
+.account-save-actions .btn{font-size:12px;display:flex;gap:8px;align-items:center;justify-content:center}
+.account-save-actions .btn:disabled{opacity:.63;cursor:default}
+.account-feedback{margin-bottom:15px}
+.account-history-heading{display:flex;gap:15px;align-items:center;justify-content:space-between;margin-bottom:17px}
+.account-refresh{display:flex;align-items:center;justify-content:center;gap:7px;flex-shrink:0;border-radius:11px;border:1px solid #dce7e9;background:#f7fbfb;color:#346a75;font-size:11px;font-weight:800;padding:9px 13px}
+.account-refresh:hover,.account-history-open:hover{background:#edf8f3}
+.account-refresh:disabled{opacity:.65}
+.account-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:150px;gap:9px;border:1px dashed #d1e4df;background:#f9fcfb;border-radius:14px;text-align:center;padding:20px;color:#698792;font-size:12px}
+.account-empty>svg{color:#229b83}
+.account-empty strong{color:#2b5b65;font-size:14px}
+.account-empty p{line-height:1.8}
+.account-history-list{display:flex;flex-direction:column;gap:9px}
+.account-history-item{display:flex;align-items:center;gap:14px;padding:14px;border:1px solid #e4eeee;border-radius:13px;background:#fff}
+.account-history-score{display:flex;align-items:baseline;justify-content:center;direction:ltr;min-width:77px;gap:3px;background:#eff8f5;border-radius:11px;padding:12px 7px;color:#187e69}
+.account-history-score strong{font-size:24px;line-height:1;font-weight:900}
+.account-history-score span{font-size:11px;color:#75a99c}
+.account-history-info{flex:1;min-width:0}
+.account-history-info h3{font-size:13px;color:#244654;font-weight:900;margin:0 0 6px}
+.account-history-info span{display:inline-flex;align-items:center;gap:6px;color:#879ba5;font-size:11px}
+.account-history-actions{display:flex;align-items:center;gap:9px}
+.account-history-open{border:1px solid #d8e8e2;background:#f4fbf8;color:#16876a;border-radius:10px;font-size:11px;font-weight:900;display:flex;align-items:center;gap:5px;white-space:nowrap;padding:9px}
+.account-history-delete{border:1px solid #f0dedc;background:#fff9f8;color:#a55e58;border-radius:10px;min-width:36px;min-height:36px;display:grid;place-items:center}
+.account-history-delete:hover{background:#fff0ed}
+.account-history-delete:disabled{opacity:.55;cursor:wait}
+.account-list-note{font-size:10px;color:#8197a1;margin-top:12px}
+.account-privacy-bar{display:flex;align-items:flex-start;gap:10px;color:#698591;font-size:11px;line-height:2;padding:15px 18px;background:#eff8f5;border-radius:13px}
+.account-privacy-bar svg{color:#249779;flex-shrink:0;margin-top:2px}
+.account-bottom-actions{display:flex;justify-content:flex-end;padding-top:19px}
+.account-bottom-actions .account-logout{width:205px;max-width:100%;margin:0}
+.result-shortcuts .result-save-shortcut{background:#e7f7ec;border-color:#c8ead7;color:#16775f}
+@media(max-width:720px){
+ .account-dashboard{padding-top:16px;padding-bottom:42px}
+ .account-banner{padding:21px 19px;border-radius:17px;align-items:flex-start;gap:12px}
+ .account-avatar{min-width:48px;height:48px;border-radius:13px}
+ .account-banner-icon{display:none}
+ .account-overview-grid{gap:7px;margin:12px 0 20px}
+ .account-stat{padding:12px 11px;border-radius:12px}
+ .account-stat strong{font-size:19px}
+ .account-stat span{font-size:10px}
+ .account-stat small{font-size:8px}
+ .account-stat svg{width:16px;height:16px}
+ .account-save-section,.account-history-section{border-radius:15px;padding:17px 14px;margin-bottom:14px}
+ .account-section-head h2{font-size:17px}
+ .account-save-actions{flex-direction:column}
+ .account-save-actions .btn{width:100%;font-size:12px}
+ .account-history-item{gap:9px;padding:10px;flex-wrap:wrap}
+ .account-history-score{min-width:68px}
+ .account-history-info h3{font-size:12px}
+ .account-history-actions{width:100%;justify-content:flex-end}
+ .account-history-open{flex:1;justify-content:center}
+ .account-bottom-actions .account-logout{width:100%}
+}
+@media(max-width:370px){
+ .account-overview-grid{grid-template-columns:1fr 1fr}
+ .account-overview-grid .account-stat:last-child{grid-column:1/-1}
+}
