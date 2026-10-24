@@ -515,3 +515,8 @@
   .auth-google-button{min-height:56px;font-size:13px;gap:9px;padding:10px}
   .auth-google-benefits{font-size:11px;padding:14px}
 }
+
+.footer-links a{font-weight:700;font-size:13px;color:#607187;text-decoration:none}
+.footer-links a:hover,.footer-links a:focus-visible{color:#1a9d7f;text-decoration:underline}
+.auth-policy-link{display:block;text-align:center;margin-top:14px;font-size:11px;font-weight:700;color:#278678}
+.auth-policy-link:hover{text-decoration:underline}
