@@ -13,6 +13,20 @@ Project: `acofddiawbhbwhcgekrk` (separate from STC/iChem).
 - Vercel previews/deployment URLs require Vercel login. Canonical production website remains public.
 - React UI includes signup/login/email confirmation/forgot password and logout.
 
+## Email templates and recovery (code deployed; hosted Auth templates NOT yet applied)
+
+- Production redirect target in frontend is strictly `https://brain-rot-assessment.vercel.app`; recovery links use `/?auth_action=recovery`.
+- Email subject suggestion: `MindReset | كود تأكيد حسابك`.
+- Signup confirmation HTML: `supabase/email-templates/confirm-signup.html` (requires `{{ .Token }}` in hosted Supabase's `Confirm signup` email template).
+- Password reset HTML: `supabase/email-templates/reset-password.html` (uses `{{ .ConfirmationURL }}`).
+- Signup OTP verifier uses `type: 'signup'`, not Magic Link's `type: 'email'`.
+- Resend button throttles additional frontend requests for 60 seconds, **in addition** to Supabase's server-side rate limits.
+- React recovery flow detects `PASSWORD_RECOVERY` and the allowlisted callback marker. Users must open PKCE recovery links in the same browser that requested them.
+- GitHub files and Vercel variables alone **cannot configure Supabase hosted Email Templates, Site URL, provider settings, CAPTCHA, rate limits or SMTP**. The current Supabase connector exposes database/migration functions but not hosted Auth Management API mutations.
+- As long as Supabase's restricted built-in SMTP remains active, emails to ordinary outside users may be rejected. Do not launch a public signup campaign before provider configuration and inbox tests.
+- Never configure CAPTCHA in Supabase until frontend sends `captchaToken`; otherwise login/signup may fail.
+- Never put management access tokens, SMTP API passwords or service role keys into GitHub code, `VITE_*` variables, conversation messages or user-editable tables.
+
 ## Manual account/email configuration not yet confirmed
 
 1. Dashboard > Authentication > URL Configuration:
