@@ -17,5 +17,7 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Typecheck
         run: npm run check
+      - name: Analyze all response paths
+        run: npm run test
       - name: Production build
         run: npm run build
