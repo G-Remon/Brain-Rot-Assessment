@@ -34,8 +34,12 @@ export function AccountPage({user,onBack,onViewSaved,currentCandidate,guestCandi
   const userId=user.id
   useEffect(()=>{
     let mounted=true
-    const fallback=typeof user.user_metadata?.display_name === 'string'
-      ? user.user_metadata.display_name.trim().slice(0,80) : ''
+    const metadata = user.user_metadata ?? {}
+    // Google OAuth returns "full_name" or "name", while manual profiles use "display_name".
+    // These are display-only values, never authorization or subscription claims.
+    const suggested = [metadata.display_name,metadata.full_name,metadata.name]
+      .find(value=>typeof value==='string' && value.trim().length>0)
+    const fallback = typeof suggested==='string' ? suggested.trim().slice(0,80) : ''
     setDisplayName(fallback)
     setDraftName(fallback)
     void loadDisplayName(userId).then(name=>{
