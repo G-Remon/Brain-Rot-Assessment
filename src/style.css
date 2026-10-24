@@ -472,3 +472,25 @@
  .account-overview-grid{grid-template-columns:1fr 1fr}
  .account-overview-grid .account-stat:last-child{grid-column:1/-1}
 }
+
+/* Account profile controls and consent-based history removal */
+.account-profile-line{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:13px 18px;background:#f6fbf9;border:1px solid #e5efeb;border-radius:12px;margin-top:15px;color:#607986;font-size:12px}
+.account-profile-line strong{color:#2a5766}
+.account-profile-edit-btn{display:inline-flex;align-items:center;gap:6px;border:1px solid #d3e5dd;border-radius:9px;background:#fff;color:#18826b;font-size:11px;font-weight:800;padding:9px 12px;white-space:nowrap}
+.account-profile-edit-btn:hover{background:#eaf8f1}
+.account-profile-form{display:flex;align-items:center;gap:8px;width:100%;flex-wrap:wrap}
+.account-profile-form label{font-size:11px;color:#436271;font-weight:800}
+.account-profile-form input{flex:1;min-width:145px;min-height:39px;border:1px solid #d4e5e1;border-radius:9px;padding:8px 12px;font-size:12px;outline:0;color:#2a5766}
+.account-profile-form input:focus{border-color:#26a785;box-shadow:0 0 0 3px #26a78519}
+.account-profile-form button{border:1px solid #d2e4dc;border-radius:9px;background:#fff;color:#1b826c;padding:9px 12px;font-size:11px;font-weight:800}
+.account-profile-form button:first-of-type{background:#1c906f;color:#fff;border-color:#1c906f}
+.account-bulk-delete{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;border-top:1px solid #ebf0f1;margin-top:16px;padding-top:17px}
+.account-bulk-delete span{color:#82949e;font-size:11px;line-height:1.9}
+.account-bulk-delete button{display:inline-flex;align-items:center;justify-content:center;gap:7px;border:1px solid #f0d4d0;color:#9f524b;background:#fff9f8;border-radius:10px;padding:9px 12px;font-size:11px;font-weight:800}
+.account-bulk-delete button:hover{background:#fff0ed}
+.account-bulk-delete button:disabled,.account-profile-form button:disabled{opacity:.55;cursor:wait}
+@media(max-width:720px){
+ .account-profile-line{padding:12px;align-items:flex-start;flex-wrap:wrap}
+ .account-profile-form label{width:100%}
+ .account-bulk-delete button{width:100%}
+}
