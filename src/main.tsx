@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 import { createRoot } from 'react-dom/client'
-import { Activity, ArrowLeft, ArrowRight, BookOpen, Check, CheckCircle2, ChevronLeft, ChevronRight, Clock3, Copy, Download, ExternalLink, Heart, Lightbulb, LockKeyhole, Menu, Moon, RotateCcw, Share2, ShieldCheck, Smartphone, Sparkles, Target, X, Zap, BrainCircuit } from 'lucide-react'
+import { Activity, ArrowLeft, ArrowRight, BookOpen, Check, CheckCircle2, ChevronLeft, Clock3, Copy, Download, ExternalLink, Heart, Lightbulb, LockKeyhole, Menu, Moon, RotateCcw, Share2, ShieldCheck, Smartphone, Sparkles, Target, X, Zap, BrainCircuit } from 'lucide-react'
 import { domains, questions, options, domainScore, totalScore, getBand, prioritizedRecommendations, sources, type AnswerMap } from './data'
 import './style.css'
 
@@ -152,7 +152,7 @@ function App() {
         {screen==='results' && allAnswered && <div className="container results-page">
           <div className="results-intro"><span className="section-kicker">خلصت! عاش إنك كملت 👏</span><h1>دي صورتك الحالية...<br/><span className="highlight">مش حكم عليك.</span></h1><p>النتيجة بتلخّص إجاباتك عن آخر 14 يوم، مش بتحدد ذكاءك أو «نسبة ضرر دماغك».</p></div>
           <div className="results-grid">
-            <article className="score-card"><span className="card-eyebrow">مجموع الإجابات</span><div className="score-ring" style={{'--amount':`${score/120*100}%`} as React.CSSProperties}><div><strong>{score}</strong><span>من 120</span></div></div><div className="band-pill">{band.title}</div><p>{band.note}</p><small>تصنيفات وصفية من تصميم الموقع، مش حدود تشخيصية معتمدة.</small></article>
+            <article className="score-card"><span className="card-eyebrow">مجموع الإجابات</span><div className="score-ring" style={{'--amount':`${score/120*100}%`} as CSSProperties}><div><strong>{score}</strong><span>من 120</span></div></div><div className="band-pill">{band.title}</div><p>{band.note}</p><small>تصنيفات وصفية من تصميم الموقع، مش حدود تشخيصية معتمدة.</small></article>
             <article className="breakdown-card"><div className="card-heading"><h2>تفصيل المحاور</h2><span>من 20 لكل محور</span></div>{ranked.map(d=><div className="score-line" key={d.id}><div className="score-name"><span><IconFor name={d.icon} size={17}/>{d.title}</span><b>{d.score}<small>/20</small></b></div><div className="bar-track"><span style={{width:`${d.score*5}%`}} className={d.score>=12?'bar-high':d.score>=7?'bar-mid':'bar-low'}/></div></div>)}</article>
           </div>
           <section className="insight-card"><div className="insight-symbol"><Sparkles size={28}/></div><div><span className="section-kicker">إيه اللي لفت نظرنا؟</span><h2>{mainAreas.length ? `أكتر جانب محتاج اهتمام: ${mainAreas[0].title}` : 'إجاباتك بتشير لصعوبات قليلة نسبيًا'}</h2><p>{mainAreas.length? `إجاباتك في ${mainAreas.map(d=>d.title).join('، ')} كانت أعلى نسبيًا من باقي المحاور. خلّينا نبدأ بعادة بسيطة بدل محاولة تغيير كل حاجة مرة واحدة.`:'حلو إن معظم المؤشرات قليلة. تقدر تركز على الحفاظ على العادات اللي بتساعدك في التعلم والنوم.'}</p></div></section>
