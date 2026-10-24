@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { User } from '@supabase/supabase-js'
-import { ArrowLeft, BookOpenCheck, CalendarDays, CheckCircle2, CloudUpload, History, LogOut, Mail, RefreshCcw, ShieldCheck, Trash2, UserRound } from 'lucide-react'
+import { ArrowLeft, BookOpenCheck, CalendarDays, CheckCircle2, CloudUpload, History, LogOut, Mail, Pencil, RefreshCcw, ShieldCheck, Trash2, UserRound } from 'lucide-react'
 import { getBand, type AnswerMap } from './data'
 import { deleteSavedAssessment, listSavedAssessments, saveAssessment, snapshotKey, type SavedAssessment } from './assessment-history'
 import { supabase } from './supabase'
+import { loadDisplayName, saveDisplayName, validDisplayName } from './account-profile'
 
 type AccountPageProps = {
   user: User
@@ -26,8 +27,24 @@ export function AccountPage({user,onBack,onViewSaved,currentCandidate,guestCandi
   const [pending,setPending]=useState('')
   const [error,setError]=useState('')
   const [notice,setNotice]=useState('')
+  const [editingName,setEditingName]=useState(false)
+  const [displayName,setDisplayName]=useState<string>('')
+  const [draftName,setDraftName]=useState<string>('')
 
   const userId=user.id
+  useEffect(()=>{
+    let mounted=true
+    const fallback=typeof user.user_metadata?.display_name === 'string'
+      ? user.user_metadata.display_name.trim().slice(0,80) : ''
+    setDisplayName(fallback)
+    setDraftName(fallback)
+    void loadDisplayName(userId).then(name=>{
+      if(!mounted||!name)return
+      setDisplayName(name)
+      setDraftName(name)
+    }).catch(()=>{/* The account remains usable if the optional profile row is missing. */})
+    return ()=>{mounted=false}
+  },[userId])
   useEffect(()=>{
     let alive=true
     setRecords([])
@@ -48,6 +65,42 @@ export function AccountPage({user,onBack,onViewSaved,currentCandidate,guestCandi
     const difference=latest.total_score-oldest.total_score
     return {latest:latest.total_score,difference,count:records.length}
   },[records])
+
+  async function saveName() {
+    if(pending) return
+    const cleaned=validDisplayName(draftName)
+    if(!cleaned) {
+      setError('اسم الحساب لازم يكون بين حرفين و80 حرف.')
+      return
+    }
+    setPending('name');setError('');setNotice('')
+    try{
+      const saved=await saveDisplayName(userId,cleaned)
+      setDisplayName(saved)
+      setDraftName(saved)
+      setEditingName(false)
+      setNotice('اسمك اتحدث على حسابك بنجاح.')
+    }catch{
+      setError('تعذّر تحديث الاسم. اتأكد من الاتصال وتسجيل الدخول وجرب تاني.')
+    }finally{setPending('')}
+  }
+
+  async function deleteAllRecords() {
+    if(pending || records.length===0 || !window.confirm('هتمسح كل نتائج الاختبارات المحفوظة على السحابة من حسابك نهائيًا. ده مش بيمسح إجابات جهازك. متأكد؟'))return
+    setPending('delete-all');setError('');setNotice('')
+    try {
+      if(!supabase)throw new Error('auth-unavailable')
+      const {data,error:identityError}=await supabase.auth.getUser()
+      if(identityError || data.user?.id!==userId)throw new Error('login-required')
+      const {error:deleteError}=await supabase.from('assessments')
+        .delete().eq('user_id',userId)
+      if(deleteError)throw deleteError
+      setRecords([])
+      setNotice('تم مسح كل النتائج المحفوظة من حسابك.')
+    }catch{
+      setError('تعذّر مسح النتائج. لم نعتبر العملية ناجحة؛ جرب تحديث السجل.')
+    }finally{setPending('')}
+  }
 
   async function refresh() {
     if (pending) return
@@ -102,8 +155,7 @@ export function AccountPage({user,onBack,onViewSaved,currentCandidate,guestCandi
     }catch{setError('حصلت مشكلة أثناء تسجيل الخروج. جرب تاني.')}finally{setPending('')}
   }
 
-  const displayName=typeof user.user_metadata?.display_name==='string'
-    ? user.user_metadata.display_name.trim().slice(0,80) || 'مستخدم MindReset' : 'مستخدم MindReset'
+  const readableName=displayName||'مستخدم MindReset'
   const currentSaved=currentCandidate && records.some(record=>snapshotKey(record.answers)===snapshotKey(currentCandidate))
   const guestSaved=guestCandidate && records.some(record=>snapshotKey(record.answers)===snapshotKey(guestCandidate))
 
@@ -113,13 +165,17 @@ export function AccountPage({user,onBack,onViewSaved,currentCandidate,guestCandi
       <div className="account-avatar"><UserRound size={25}/></div>
       <div className="account-banner-copy">
         <span className="section-kicker">مساحتك الشخصية</span>
-        <h1>أهلاً بيك، {displayName}</h1>
+        <h1>أهلاً بيك، {readableName}</h1>
         <p>نتائجك محفوظة في حسابك فقط لما تختار حفظها بنفسك.</p>
         <div className="account-email"><Mail size={15}/><span dir="ltr">{user.email}</span>{user.email_confirmed_at && <CheckCircle2 size={16} aria-label="البريد مؤكد"/>}</div>
       </div>
       <div className="account-banner-icon"><ShieldCheck size={30}/><span>بيانات خاصة</span></div>
     </div>
 
+    <div className="account-profile-line">
+      {!editingName ? <><span>الاسم الظاهر في حسابك: <strong>{readableName}</strong></span><button type="button" className="account-profile-edit-btn" disabled={!!pending} onClick={()=>{setDraftName(displayName);setEditingName(true)}}><Pencil size={15}/> تعديل الاسم</button></> :
+      <div className="account-profile-form"><label htmlFor="account-edit-name">اسم الحساب</label><input id="account-edit-name" autoComplete="name" maxLength={80} value={draftName} onChange={event=>setDraftName(event.target.value)} disabled={!!pending}/><button type="button" disabled={!!pending} onClick={()=>void saveName()}>حفظ</button><button type="button" disabled={!!pending} onClick={()=>setEditingName(false)}>إلغاء</button></div>}
+    </div>
     <div className="account-overview-grid">
       <div className="account-stat"><History size={20}/><span>نتائج محفوظة</span><strong>{loading?'—':records.length}</strong></div>
       <div className="account-stat"><BookOpenCheck size={20}/><span>آخر نتيجة محفوظة</span><strong>{stats?stats.latest+'/120':'—'}</strong></div>
@@ -157,6 +213,10 @@ export function AccountPage({user,onBack,onViewSaved,currentCandidate,guestCandi
         })}</div>
       }
       {records.length===40&&<p className="account-list-note">بيظهر آخر 40 نتيجة محفوظة حاليًا.</p>}
+      {records.length>0 && <div className="account-bulk-delete">
+        <span>لو حابب تبدأ بسجل فاضي، تقدر تمسح كل نتائجك المحفوظة على السحابة.</span>
+        <button type="button" disabled={!!pending} onClick={()=>void deleteAllRecords()}><Trash2 size={15}/>{pending==='delete-all'?'جاري المسح...':'مسح كل النتائج المحفوظة'}</button>
+      </div>}
     </div>
 
     <div className="account-privacy-bar"><ShieldCheck size={19}/><span>كل نتائجك مربوطة بحسابك. قواعد RLS على قاعدة البيانات بتمنع حساب تاني من الاطلاع عليها. التخزين على جهازك منفصل عن السحابة.</span></div>
