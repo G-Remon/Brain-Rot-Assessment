@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { authRedirectUrl, isRecoveryRedirect, MINDRESET_URL } from '../src/auth-urls'
+import { authRedirectUrl, isRecoveryRedirect, isGoogleRedirect, MINDRESET_URL } from '../src/auth-urls'
 
 describe('allowlisted authentication redirects', () => {
   it('uses production origin for preview or unexpected origins', () => {
@@ -10,6 +10,11 @@ describe('allowlisted authentication redirects', () => {
   it('supports safe local testing', () => {
     expect(authRedirectUrl('http://localhost:5173')).toBe('http://localhost:5173')
     expect(authRedirectUrl('http://127.0.0.1:5173','recovery')).toBe('http://127.0.0.1:5173/?auth_action=recovery')
+  })
+  it('generates a Google callback on the exact allowed origin', () => {
+    expect(authRedirectUrl('https://unsafe-preview.vercel.app','google')).toBe(MINDRESET_URL+'/?auth_action=google')
+    expect(isGoogleRedirect('?auth_action=google')).toBe(true)
+    expect(isGoogleRedirect('?auth_action=login')).toBe(false)
   })
   it('routes recovery explicitly without passing email/password in the URL', () => {
     expect(authRedirectUrl('https://fake-login.example','recovery'))
