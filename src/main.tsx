@@ -58,10 +58,24 @@ function App() {
     setIndex(missing>=0?missing:0)
     setScreen('quiz')
   }
-  function selectAnswer(value:number) {
-    setAnswers(p=>({...p,[question.id]:value}))
-    if(index<questions.length-1) setTimeout(()=>setIndex(n=>n===index ? n+1 : n),180)
-    else setTimeout(()=>setScreen('results'),240)
+  // Selection only updates the current question. Never switch questions from a choice click:
+  // automatic transitions can register a second tap on the next question on touch screens.
+  function selectAnswer(questionId: string, value: number) {
+    setAnswers(previous=>({...previous,[questionId]:value}))
+  }
+  function goNext() {
+    if (answers[question.id] === undefined) return
+    if (index < questions.length - 1) {
+      setIndex(current=>Math.min(current+1,questions.length-1))
+      return
+    }
+    // A complete response is required even if the user skipped questions previously.
+    const missing=questions.findIndex(item=>answers[item.id]===undefined)
+    if (missing>=0) {
+      setIndex(missing)
+      return
+    }
+    setScreen('results')
   }
   function reset(){
     if(!window.confirm('متأكد إنك عايز تبدأ من جديد؟ إجاباتك الحالية هتتمسح.'))return
@@ -144,14 +158,14 @@ function App() {
           <section className="container final-cta"><div><span className="section-kicker">جاهز تجرّب؟</span><h2>5 دقايق ممكن يفتحوا عينك على عاداتك</h2><p>بدل ما تحكم على نفسك، افهم نفسك الأول.</p></div><button onClick={startQuiz} className="btn btn-primary">ابدأ دلوقتي <ArrowLeft size={20}/></button></section>
         </>}
         {screen==='quiz' && <section className="quiz-layout container">
-          <div className="quiz-topline"><button className="quiet-button" onClick={()=>setScreen('home')}><X size={18}/> خروج وحفظ التقدم</button><span className="privacy-line"><ShieldCheck size={16}/> إجاباتك على جهازك بس</span></div>
+          <div className="quiz-topline"><button className="quiet-button" onClick={()=>setScreen('home')}><X size={18}/> خروج وحفظ التقدم</button><button className="quiet-button quiz-restart" onClick={reset}><RotateCcw size={15}/> ابدأ من الأول</button></div>
           <div className="quiz-card">
             <div className="quiz-heading"><span className="section-kicker">{domains.find(d=>d.id===question.domain)?.title}</span><span className="question-counter">سؤال <b>{index+1}</b> من {questions.length}</span></div>
             <div className="progress-track" role="progressbar" aria-valuemin={0} aria-valuemax={questions.length} aria-valuenow={index+1} aria-label="تقدم الاختبار"><span style={{width:`${((index+1)/questions.length)*100}%`}}/></div>
             <h1 className="question-title">{question.text}</h1>
-            <p className="quiz-help">فكّر في آخر 14 يوم، واختار أقرب إجابة ليك.</p>
-            <div className="answer-list">{options.map((o,i)=><button className={answers[question.id]===o.value?'answer-option selected':'answer-option'} key={o.value} onClick={()=>selectAnswer(o.value)}><span className="answer-index">{['أ','ب','ج','د','هـ'][i]}</span><span>{o.label}</span><span className="radio-circle">{answers[question.id]===o.value?<Check size={16}/>:null}</span></button>)}</div>
-            <div className="quiz-footer"><button className="quiet-button" disabled={index===0} onClick={()=>setIndex(n=>n-1)}><ArrowRight size={18}/> اللي قبله</button><span>مفيش إجابة صح وغلط 🤍</span><button className="quiet-button" disabled={index>=questions.length-1 || answers[question.id]===undefined} onClick={()=>setIndex(n=>n+1)}>اللي بعده <ArrowLeft size={18}/></button></div>
+            <p className="quiz-help">فكّر في آخر 14 يوم، واختار أقرب إجابة ليك. بعدها اضغط «التالي».</p>
+            <div className="answer-list" key={question.id}>{options.map((o,i)=><button type="button" aria-pressed={answers[question.id]===o.value} className={answers[question.id]===o.value?'answer-option selected':'answer-option'} key={`${question.id}-${o.value}`} onClick={()=>selectAnswer(question.id,o.value)}><span className="answer-index">{['أ','ب','ج','د','هـ'][i]}</span><span>{o.label}</span><span className="radio-circle">{answers[question.id]===o.value?<Check size={16}/>:null}</span></button>)}</div>
+            <div className="quiz-footer"><button type="button" className="quiz-back" disabled={index===0} onClick={()=>setIndex(n=>n-1)}><ArrowRight size={18}/> السابق</button><button type="button" className="quiz-next" disabled={answers[question.id]===undefined} onClick={goNext}>{index===questions.length-1?'شوف نتيجتك':'التالي'} <ArrowLeft size={19}/></button></div>
           </div>
           <p className="quiz-bottom-note">خد وقتك. كل إجابة بتساعدنا نديك تحليل أقرب لعاداتك.</p>
         </section>}
