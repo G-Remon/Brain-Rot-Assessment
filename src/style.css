@@ -206,3 +206,24 @@
   .video-recommendation{break-inside:avoid}
   .recommended-book-card{break-inside:avoid}
 }
+
+/* Explicit answer confirmation: never advance when an answer is simply selected. */
+.quiz-footer{display:flex;justify-content:space-between;gap:12px;align-items:stretch}
+.quiz-next,.quiz-back{border:0;border-radius:13px;display:inline-flex;align-items:center;justify-content:center;gap:9px;font-size:14px;font-weight:900;min-height:49px;padding:10px 21px;transition:background .15s,transform .15s}
+.quiz-next{background:#1ca884;color:white;box-shadow:0 6px 17px #16a17d23;min-width:145px}
+.quiz-next:hover:not(:disabled){background:#148d70}
+.quiz-next:disabled{background:#e6efed;color:#94a7a4;box-shadow:none;opacity:1}
+.quiz-back{border:1px solid #dfe8e9;background:#f5f8f9;color:#556b7c}
+.quiz-back:hover:not(:disabled){background:#e9f0f1}
+.quiz-restart{border:1px solid #e3eceb;background:#fff;border-radius:10px;padding:7px 10px;color:#718694;white-space:nowrap}
+.quiz-restart:hover{color:#15856b;border-color:#9fdbca}
+@media(max-width:640px){
+  .quiz-footer{display:grid;grid-template-columns:1fr 1.5fr;gap:9px}
+  .quiz-next,.quiz-back{width:100%;min-height:52px;font-size:13px;padding:10px 12px}
+  .quiz-next{font-size:15px}
+  .quiz-restart{font-size:11px}
+}
+@media(max-width:360px){
+  .quiz-next,.quiz-back{min-height:49px;padding:7px 9px}
+  .quiz-footer{gap:7px}
+}
