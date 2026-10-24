@@ -13,16 +13,20 @@ MindReset is a self-assessment and habit-improvement website. Its results are no
 - CI: test suite, typecheck, build, production dependency audit, separate CodeQL scan. Dependabot PRs track updates.
 - Current `pro` entitlement is server-owned and **no payment provider is integrated**.
 
-## Before enabling public signups
+## Before enabling public Google sign-in
 
-1. Supabase Auth > URL Configuration: Site URL `https://brain-rot-assessment.vercel.app`, allowed Redirect URL `https://brain-rot-assessment.vercel.app/**`. Do not allow `*` across unrelated domains.
-2. Auth > Email: keep **Confirm email** enabled. Setup a dedicated signup template using `{{ .Token }}` for 6-digit OTP; standard confirmation links still work. Configure recovery template and redirect.
-3. Configure a verified SMTP sender for real traffic, email rate limits, CAPTCHA, and abuse protection. Supabase's default email sender is unsuitable for scale.
-4. Test signup, confirmed/unconfirmed login, wrong/expired OTP, throttling, recovery URL, password update, logout and session refresh on desktop and phone.
-5. Activate account multi-factor authentication for **project owners/admins** at GitHub, Supabase and Vercel. Review connected apps and team access.
-6. Publish a plain-language privacy policy, data retention and account-deletion path before onboarding real users.
-7. Test DB using **two different real test accounts**: user A must never fetch, change or delete user B's rows. Use `supabase/schema.sql` as the reviewed baseline.
-8. Back up schema and data before future migrations, and test recovery steps.
+1. Create a **Google Cloud OAuth Web client** for the MindReset brand: use only basic identity scopes (`openid email profile`); the callback URI must be exactly `https://acofddiawbhbwhcgekrk.supabase.co/auth/v1/callback`.
+2. **Enter the Google Client ID and Client Secret directly into Supabase Authentication > Providers > Google.** The secret must never be exposed to browser code or committed to GitHub.
+3. Set Supabase Auth **Site URL** to `https://brain-rot-assessment.vercel.app`; allow only the canonical `https://brain-rot-assessment.vercel.app/?auth_action=google` callback (and strictly required same-origin routes). No open wildcards or arbitrary preview URLs.
+4. Keep OAuth nonce checks enabled and PKCE flow active. Google OAuth provider configuration and live real-account sign-in are **not verified yet**.
+5. Google OAuth replaces MindReset email/password/OTP interface. No SMTP is needed for this login method; enable other Auth providers only with a clear reason and a security review.
+6. Use **External** audience in Google Cloud for regular Gmail users; when in Testing mode, only authorized test users should sign in. Publish only after a real-device/login/logout/security test.
+7. Turn on MFA for project owners at Google, GitHub, Supabase and Vercel. Review third-party app access and team permissions.
+8. Publish a clear privacy policy at `https://brain-rot-assessment.vercel.app/privacy.html`, including contact and deletion process. Review the text for legal suitability before public launch.
+9. Test saved-assessment row isolation with at least two real user accounts: user A cannot read, edit or delete user B's rows. PostgreSQL synthetic RLS tests aren't a substitute for live OAuth.
+10. Back up schema and data and document recovery. Before adding payment, enforce all paid features on trusted backend functions, never just client-side Google login.
+
+Read `docs/GOOGLE_SIGN_IN_SETUP.md` for the exact setup steps.
 
 ## GitHub administrator actions required
 
