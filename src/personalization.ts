@@ -168,11 +168,28 @@ export function buildPersonalReport(answers: AnswerMap): PersonalReport {
     const answer=answers[question.id] ?? 0
     const guide=questionGuides[question.id]
     const level:QuestionReading['level']= answer===0?'strength':answer===1?'light':answer===2?'noticeable':'frequent'
-    const observation=answer===0?guide.strength:answer===1?'ده حصل نادرًا حسب إجابتك، فمش لازم يكون أولوية دلوقتي. '+guide.signal:guide.signal
+    const observation=answer===0
+      ?guide.strength
+      :answer===1
+        ?'ده حصل نادرًا خلال آخر 14 يوم، فغالبًا مش أولوية. '+guide.signal
+        :answer===2
+          ?'اخترت «أحيانًا»: الموقف ده بيظهر من وقت للتاني، وممكن تبدأ بتجربة بسيطة. '+guide.signal
+          :answer===3
+            ?'اخترت «غالبًا»: الموقف ده متكرر نسبيًا عندك، فمفيد تلاحظ توقيته. '+guide.signal
+            :'اخترت «دايمًا»: ده سلوك بتبلغ إنه بيتكرر كتير، ويفضل تراجع تأثيره الفعلي على يومك. '+guide.signal
+    const action=answer===0
+      ?'حافظ على العادة دي طالما مناسبة ليومك.'
+      :answer===1
+        ?'لو لاحظت إن الموضوع بدأ يتكرر، ممكن تجرب: '+guide.nextStep
+        :answer===2
+          ?guide.nextStep
+          :answer===3
+            ?guide.nextStep+' جرّبها 3 أيام وشوف هل الصعوبة قلت.'
+            :guide.nextStep+' ابدأ بخطوة واحدة النهارده، وسجّل هل قدرت تنفذها والنتيجة.'
     return {
       id:question.id,domain:question.domain,answer,answerLabel:options[answer]?.label ?? 'أبدًا',
       title:guide.title,observation,
-      action:answer===0?'حافظ على العادة دي طالما مناسبة ليومك.':guide.nextStep,
+      action,
       sourceId:guide.sourceId,level,
       weight:answer*10 + (question.domain==='impact'?4:0) + (question.domain==='sleep'?2:0)
     }
