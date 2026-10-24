@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { createRoot } from 'react-dom/client'
 import { Activity, ArrowLeft, ArrowRight, BookOpen, Check, CheckCircle2, ChevronLeft, Clock3, Copy, Download, ExternalLink, Heart, Lightbulb, LockKeyhole, Menu, Moon, RotateCcw, Share2, ShieldCheck, Smartphone, Sparkles, Target, X, Zap, BrainCircuit, Play, UserRound } from 'lucide-react'
@@ -29,42 +29,62 @@ function IconFor({ name, size = 20 }: { name: string; size?: number }) {
     default: return <Activity {...shared}/>
   }
 }
-function readStored(): AnswerMap {
+function storageKey(key: string, owner: string): string {
+  // Never display the previous signed-in person's local quiz to the next account.
+  return owner === 'guest' ? key : `${key}:user:${owner}`
+}
+function readStored(owner: string): AnswerMap {
   try {
-    const parsed: unknown = JSON.parse(localStorage.getItem(KEY) || '{}')
+    const parsed: unknown = JSON.parse(localStorage.getItem(storageKey(KEY,owner)) || '{}')
     if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {}
     return Object.fromEntries(Object.entries(parsed).filter(([id,value]) => questions.some(q=>q.id===id) && typeof value==='number' && Number.isInteger(value) && value>=0 && value<=4))
+  } catch { return {} }
+}
+function readPlanStored(owner: string): Record<number,boolean> {
+  try {
+    const value:unknown=JSON.parse(localStorage.getItem(storageKey(PLAN_KEY,owner)) || '{}')
+    return value && typeof value==='object' && !Array.isArray(value) ? value as Record<number,boolean> : {}
   } catch { return {} }
 }
 function App() {
   const [screen,setScreen]=useState<Screen>('home')
   const [user,setUser]=useState<User|null>(null)
   const [authMode,setAuthMode]=useState<AuthMode>('login')
-  const [answers,setAnswers]=useState<AnswerMap>(readStored)
+  const [storageOwner,setStorageOwner]=useState('guest')
+  const storageOwnerRef=useRef('guest')
+  const [answers,setAnswers]=useState<AnswerMap>(()=>readStored('guest'))
   const [index,setIndex]=useState(0)
   const [showMenu,setShowMenu]=useState(false)
   const [feedback,setFeedback]=useState('')
-  const [completed,setCompleted]=useState<Record<number,boolean>>(()=>{
-    try { const value=JSON.parse(localStorage.getItem(PLAN_KEY)||'{}');return value && typeof value==='object' && !Array.isArray(value) ? value : {} }catch{return {}}
-  })
+  const [completed,setCompleted]=useState<Record<number,boolean>>(()=>readPlanStored('guest'))
   useEffect(()=>{
     if (!supabase) return
     let mounted = true
-    const {data:{subscription}} = supabase.auth.onAuthStateChange((event,session)=>{
+    const syncUser=(nextUser:User|null)=>{
       if (!mounted) return
-      setUser(session?.user ?? null)
+      const owner=nextUser?.id ?? 'guest'
+      if (storageOwnerRef.current !== owner) {
+        storageOwnerRef.current=owner
+        setStorageOwner(owner)
+        setAnswers(readStored(owner))
+        setCompleted(readPlanStored(owner))
+        setIndex(0)
+      }
+      setUser(nextUser)
+    }
+    const {data:{subscription}} = supabase.auth.onAuthStateChange((event,session)=>{
+      syncUser(session?.user ?? null)
       if (event === 'PASSWORD_RECOVERY') {
         setAuthMode('new-password')
         setScreen('auth')
       }
     })
-    void supabase.auth.getUser().then(({data})=>{
-      if (mounted && data.user) setUser(data.user)
-    }).catch(()=>{})
+    void supabase.auth.getUser().then(({data})=>syncUser(data.user ?? null))
+      .catch(()=>{/* Anonymous access to the quiz stays available offline. */})
     return ()=>{mounted=false;subscription.unsubscribe()}
   },[])
-  useEffect(()=>{localStorage.setItem(KEY,JSON.stringify(answers))},[answers])
-  useEffect(()=>{localStorage.setItem(PLAN_KEY,JSON.stringify(completed))},[completed])
+  useEffect(()=>{localStorage.setItem(storageKey(KEY,storageOwner),JSON.stringify(answers))},[answers,storageOwner])
+  useEffect(()=>{localStorage.setItem(storageKey(PLAN_KEY,storageOwner),JSON.stringify(completed))},[completed,storageOwner])
   useEffect(()=>{window.scrollTo({top:0,behavior:'instant'})},[screen,index])
   const answered=Object.keys(answers).length
   const question=questions[index]
