@@ -1,31 +1,32 @@
-# MindReset • Phase 1 Supabase setup
+# MindReset • live Supabase project setup
 
-This is a project-specific checklist for `https://acofddiawbhbwhcgekrk.supabase.co`.
-Do not reuse the company's existing Supabase project.
+Project: `acofddiawbhbwhcgekrk` (separate from STC/iChem).
 
-## Implemented in React
-- Email/password sign-up.
-- Email/password sign-in and sign-out.
-- Email confirmation with a six-digit OTP (when the Supabase confirmation email template uses `{{ .Token }}`), or its standard confirmation link.
-- Resend confirmation email.
-- Forgot password using Supabase recovery email; set new password.
-- User account summary. Anonymous quiz remains available.
-- Public Vercel env vars use `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`.
-- No secret or service-role API keys in browser or GitHub.
+## Implemented and verified
+- Connected the Gerges Supabase account to this project.
+- Applied `supabase/schema.sql` through Supabase migration `mindreset_phase1_hardened_accounts_and_entitlements`.
+- Created `public.profiles`, `public.assessments`, and `public.entitlements`.
+- All 3 tables use RLS; anonymous users cannot select them. Rows belong to `auth.uid()`.
+- `entitlements` is read-only for browsers. PRO must require nonexpired, server-trusted entitlements.
+- Removed `anon`/`authenticated` EXECUTE grants from elevated function `public.rls_auto_enable()`. Security advisors show zero findings.
+- Set Vercel public env settings `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`. No server keys in frontend.
+- Vercel previews/deployment URLs require Vercel login. Canonical production website remains public.
+- React UI includes signup/login/email confirmation/forgot password and logout.
 
-## Required Supabase configuration before public release
-1. Connect the **Supabase account/organization that owns the MindReset project** to ChatGPT (or invite the connected Supabase account with project-level edit access). Until then, database changes cannot be applied or validated from the connector.
-2. Supabase Dashboard > Authentication > URL Configuration:
+## Manual account/email configuration not yet confirmed
+
+1. Dashboard > Authentication > URL Configuration:
    - Site URL: `https://brain-rot-assessment.vercel.app`
-   - Allowed Redirect URLs: `https://brain-rot-assessment.vercel.app/**`
-   - Optional local dev: `http://localhost:5173/**`
-3. Authentication > Providers > Email: enable email/password sign-up and require email confirmation.
-4. For 6-digit signup OTP, Authentication > Email Templates > Confirm signup should contain the `{{ .Token }}` variable (and a clear explanation). If left unchanged, the app also supports Supabase's standard confirmation link. Never disable confirmation just to bypass OTP testing.
-5. Authentication > Email Templates > Reset Password should redirect to the configured Site URL. The React app handles the Supabase `PASSWORD_RECOVERY` event.
-6. For real traffic, configure verified SMTP, correct sending domain, abuse protection/CAPTCHA and appropriate email rate limits. Supabase's default mail sender may be unsuitable for production volume.
-7. Run `supabase/schema.sql` **only after inspecting the new project's tables**, in the MindReset project. Enable RLS and grants exactly as provided. The frontend currently does not claim that cloud sync is active.
-8. Verify RLS with two separate test users: User A cannot read or modify user B's profile, assessments, or entitlements. Authenticated clients cannot write entitlements.
-9. Test sign-up, confirmation email and OTP, sign-in, sign-out, forgotten password and direct visits to recovery links, both on desktop and phone.
+   - Additional Redirect URLs: `https://brain-rot-assessment.vercel.app/**`
+2. Dashboard > Authentication > Providers > Email: enable password sign-up and **Confirm email**.
+3. Authentication > Email Templates > Confirm signup: include `{{ .Token }}` to deliver six-digit signup OTP; keep the verification link if desired.
+4. Authentication > Email Templates > Reset Password: ensure recovery links redirect to the allowed website URL.
+5. Enable verified SMTP, abuse protection/CAPTCHA and configured rate limits before public onboarding.
+6. Confirm sign-up -> OTP -> sign-in -> recovery and logout with real test email inbox. Automated build tests alone do not prove delivered emails.
+7. Run browser test with two distinct accounts for access isolation and account deletion.
 
-## Later phase
-Implement explicit opt-in to upload the current browser-local assessment to the user's own cloud account. Never silently attach anonymous browsing data to a different user account. Add profile/deletion UI, subscription policy, and goal tracking in separate reviewed stages.
+## Next safe product task
+
+Implement an explicit **Save my results to my account** action, with user's permission, and show history via authenticated RLS queries. Do not silently upload anonymous local answers. Assessments from the frontend are subjective self-reports, not trusted payment claims.
+
+See `SECURITY.md` for mandatory GitHub branch protection and future payment requirements.
