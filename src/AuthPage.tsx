@@ -2,13 +2,8 @@ import { useEffect, useState } from 'react'
 import { ArrowLeft, LockKeyhole, ShieldCheck, Sparkles, UserRound } from 'lucide-react'
 import { beginGoogleSignIn } from './google-auth'
 
-// The previous email/OTP interface is intentionally retired. No password or
-// email verification is collected or simulated by MindReset's UI.
-export type AuthMode = 'login' | 'signup' | 'otp' | 'otp-login-request' | 'otp-login-verify' | 'forgot' | 'new-password'
-
+// MindReset never receives a Google password or one-time code.
 type AuthPageProps = {
-  initialMode?: AuthMode
-  onDone: () => void
   onBack: () => void
   oauthError?: boolean
 }
