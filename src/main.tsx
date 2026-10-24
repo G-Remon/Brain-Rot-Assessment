@@ -384,7 +384,7 @@ function App() {
           <div className="science-bottom"><h2>خلينا نفهم عاداتك من غير أحكام.</h2><button className="btn btn-primary" onClick={startQuiz}>ابدأ الاختبار <ArrowLeft size={18}/></button></div>
         </div>}
       </main>
-      <footer className="footer"><div className="container footer-inner"><div className="footer-brand"><BrainCircuit size={21}/> <strong>mindreset</strong><span>افهم عاداتك. اختار براحتك.</span></div><div className="footer-links"><button onClick={()=>setScreen('science')}>العلم والمصادر</button><button onClick={()=>setScreen('home')}>الرئيسية</button></div><div className="footer-credit"><p>تقييم ذاتي للتوعية فقط — مش تشخيص طبي. © {new Date().getFullYear()} MindReset</p><span>Developed by <strong>Gerges Remon</strong></span></div></div></footer>
+      <footer className="footer"><div className="container footer-inner"><div className="footer-brand"><BrainCircuit size={21}/> <strong>mindreset</strong><span>افهم عاداتك. اختار براحتك.</span></div><div className="footer-links"><button onClick={()=>setScreen('science')}>العلم والمصادر</button><button onClick={()=>setScreen('home')}>الرئيسية</button><a href="/privacy.html">سياسة الخصوصية</a></div><div className="footer-credit"><p>تقييم ذاتي للتوعية فقط — مش تشخيص طبي. © {new Date().getFullYear()} MindReset</p><span>Developed by <strong>Gerges Remon</strong></span></div></div></footer>
     </div>
   )
 }
