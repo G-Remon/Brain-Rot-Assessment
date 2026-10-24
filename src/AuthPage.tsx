@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { ArrowLeft, CheckCircle2, Eye, EyeOff, KeyRound, LockKeyhole, LogOut, Mail, RotateCcw, ShieldCheck, UserRound } from 'lucide-react'
 import { normalizedEmail, validEmail, validOtp, validPassword } from './auth-validation'
+import { authRedirectUrl } from './auth-urls'
 import { supabase } from './supabase'
 
 export type AuthMode = 'login' | 'signup' | 'otp' | 'forgot' | 'new-password'
@@ -23,6 +24,7 @@ export function AuthPage({ initialMode = 'login', onDone, onBack }: AuthPageProp
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
+  const [lastResentAt, setLastResentAt] = useState(0)
 
   useEffect(() => { setMode(initialMode) }, [initialMode])
 
@@ -69,12 +71,13 @@ export function AuthPage({ initialMode = 'login', onDone, onBack }: AuthPageProp
           password,
           options: {
             data: { display_name: name.trim() },
-            emailRedirectTo: window.location.origin,
+            emailRedirectTo: authRedirectUrl(window.location.origin),
           },
         })
         if (authError) throw authError
         if (data.session) { onDone(); return }
         setMode('otp')
+        setLastResentAt(Date.now())
         setNotice('بعتنالك رسالة تأكيد على بريدك. لو وصل كود 6 أرقام اكتبه هنا، ولو وصلك رابط تأكيد افتحه.')
         return
       }
@@ -96,10 +99,10 @@ export function AuthPage({ initialMode = 'login', onDone, onBack }: AuthPageProp
       }
       if (mode === 'forgot') {
         const { error: authError } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
-          redirectTo: window.location.origin,
+          redirectTo: authRedirectUrl(window.location.origin, 'recovery'),
         })
         if (authError) throw authError
-        setNotice('لو البريد ده مرتبط بحساب، هتوصلك رسالة استرجاع. افتح الرابط واتبع الخطوات.')
+        setNotice('لو البريد ده مرتبط بحساب، هتوصلك رسالة استرجاع. افتح الرابط على نفس المتصفح اللي طلبت منه الاسترجاع عشان نكمل التحقق بأمان.')
         return
       }
       if (mode === 'new-password') {
@@ -115,7 +118,9 @@ export function AuthPage({ initialMode = 'login', onDone, onBack }: AuthPageProp
         ? 'مش قادرين نسجل دخولك. راجع بياناتك وتأكيد الإيميل وجرب تاني.'
         : mode === 'otp'
           ? 'الكود غير صحيح أو منتهي الصلاحية. راجع الرسالة أو اطلب كود جديد.'
-          : 'حصلت مشكلة أثناء تنفيذ الطلب. راجع البيانات واتأكد إن إعدادات Supabase والبريد مفعلة.')
+          : mode === 'new-password'
+            ? 'رابط الاسترجاع منتهي أو الجلسة غير صالحة. اطلب رابط جديد من شاشة نسيت كلمة المرور.'
+            : 'تعذّر إرسال الرسالة أو تنفيذ الطلب. اتأكد من إعدادات إرسال البريد في Supabase وجرب تاني.')
     } finally {
       setBusy(false)
     }
@@ -123,15 +128,20 @@ export function AuthPage({ initialMode = 'login', onDone, onBack }: AuthPageProp
 
   async function resend() {
     if (!supabase || busy || !validEmail(email)) return
+    if (Date.now() - lastResentAt < 60000) {
+      setNotice('لو لسه طلبت رسالة، استنى دقيقة قبل إعادة الإرسال عشان نتجنب حظر الطلبات.')
+      return
+    }
     setBusy(true); setError(''); setNotice('')
     try {
       const { error: authError } = await supabase.auth.resend({
         email: normalizedEmail(email),
         type: 'signup',
-        options: { emailRedirectTo: window.location.origin },
+        options: { emailRedirectTo: authRedirectUrl(window.location.origin) },
       })
       if (authError) throw authError
-      setNotice('طلبنا إعادة إرسال الرسالة. افحص بريدك وملف Spam.')
+      setLastResentAt(Date.now())
+      setNotice('طلبنا إعادة إرسال الرسالة. افحص بريدك وملف Spam. تقدر تطلب رسالة تانية بعد دقيقة.')
     } catch {
       setError('مش قادرين نعيد الإرسال دلوقتي. استنى شوية وجرب تاني.')
     } finally { setBusy(false) }
