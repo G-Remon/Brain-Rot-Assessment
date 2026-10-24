@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 import { createRoot } from 'react-dom/client'
-import { Activity, ArrowLeft, ArrowRight, BookOpen, Check, CheckCircle2, ChevronLeft, Clock3, Copy, Download, ExternalLink, Heart, Lightbulb, LockKeyhole, Menu, Moon, RotateCcw, Share2, ShieldCheck, Smartphone, Sparkles, Target, X, Zap, BrainCircuit } from 'lucide-react'
-import { domains, questions, options, domainScore, totalScore, getBand, prioritizedRecommendations, sources, type AnswerMap } from './data'
+import { Activity, ArrowLeft, ArrowRight, BookOpen, Check, CheckCircle2, ChevronLeft, Clock3, Copy, Download, ExternalLink, Heart, Lightbulb, LockKeyhole, Menu, Moon, RotateCcw, Share2, ShieldCheck, Smartphone, Sparkles, Target, X, Zap, BrainCircuit, Play } from 'lucide-react'
+import { domains, questions, options, domainScore, totalScore, getBand, prioritizedRecommendations, recommendBooks, sources, type AnswerMap } from './data'
 import './style.css'
 
 type Screen = 'home' | 'quiz' | 'results' | 'science'
@@ -50,6 +50,7 @@ function App() {
   const band=getBand(score)
   const ranked=useMemo(()=>[...domains].map(d=>({...d,score:domainScore(answers,d.id)})).sort((a,b)=>b.score-a.score),[answers])
   const recs=useMemo(()=>prioritizedRecommendations(answers),[answers])
+  const booksForYou=useMemo(()=>recommendBooks(answers),[answers])
   const mainAreas=ranked.filter(d=>d.score>=5).slice(0,3)
   const allAnswered=answered===questions.length
   function startQuiz() {
@@ -163,6 +164,49 @@ function App() {
           </div>
           <section className="insight-card"><div className="insight-symbol"><Sparkles size={28}/></div><div><span className="section-kicker">إيه اللي لفت نظرنا؟</span><h2>{mainAreas.length ? `أكتر جانب محتاج اهتمام: ${mainAreas[0].title}` : 'إجاباتك بتشير لصعوبات قليلة نسبيًا'}</h2><p>{mainAreas.length? `إجاباتك في ${mainAreas.map(d=>d.title).join('، ')} كانت أعلى نسبيًا من باقي المحاور. خلّينا نبدأ بعادة بسيطة بدل محاولة تغيير كل حاجة مرة واحدة.`:'حلو إن معظم المؤشرات قليلة. تقدر تركز على الحفاظ على العادات اللي بتساعدك في التعلم والنوم.'}</p></div></section>
           <section className="advice-section" id="solutions"><div className="section-top"><span className="section-kicker">خطوات مناسبة لإجاباتك</span><h2>تقدر تبدأ بإيه من النهارده؟</h2><p>اقتراحات عملية مرتبطة بالجوانب الأعلى في إجاباتك، مش وصفة علاجية.</p></div><div className="advice-grid">{recs.map((r,i)=><article className="advice-card" key={r.title}><span className="advice-count">{String(i+1).padStart(2,'0')}</span><h3>{r.title}</h3><p>{r.description}</p><div className="advice-action"><Zap size={17}/><span>{r.action}</span></div><div className="evidence"><BookOpen size={15}/>{r.evidence} <a href={sources.find(s=>s.id===r.sourceId)?.url} target="_blank" rel="noopener noreferrer">المصدر <ExternalLink size={12}/></a></div></article>)}</div></section>
+          <section className="more-help-section" id="resources">
+            <div className="section-top">
+              <span className="section-kicker">لو حابب تتعمق شوية</span>
+              <h2>فيديو وكتب تساعدك تكمل</h2>
+              <p>اختيارات تساعدك تفهم عاداتك وتجرب حلول بسيطة، مش بديل عن تقييم متخصص لو عندك مشكلة مستمرة.</p>
+            </div>
+            <a className="video-recommendation" href="https://www.youtube.com/watch?v=Lfs9LrpEUf0" target="_blank" rel="noopener noreferrer" aria-label="شاهد فيديو الدحيح: لماذا لا نستطيع قراءة الكتب؟ على يوتيوب">
+              <div className="video-poster">
+                <img src="https://i.ytimg.com/vi/Lfs9LrpEUf0/hqdefault.jpg" loading="lazy" alt="صورة مصغرة لفيديو الدحيح: لماذا لا نستطيع قراءة الكتب؟" />
+                <div className="video-play"><Play size={26} fill="currentColor" aria-hidden="true" /></div>
+                <span className="video-youtube">YouTube</span>
+              </div>
+              <div className="video-description">
+                <span className="video-eyebrow"><Sparkles size={15}/> فيديو يستاهل تشوفه</span>
+                <h3>لماذا لا نستطيع قراءة الكتب؟</h3>
+                <p>الدحيح • لو حاسس إن القراءة الطويلة بقت تقيلة عليك، الفيديو ده نقطة بداية لطيفة للتفكير في الموضوع.</p>
+                <span className="video-link">اتفرج على الفيديو <ExternalLink size={16}/></span>
+              </div>
+            </a>
+            <div className="recommended-books-header">
+              <div><span className="section-kicker">على حسب إجاباتك</span><h3>كتب ممكن تفيدك</h3></div>
+              <span>ابدأ بكتاب واحد بس</span>
+            </div>
+            <div className="recommended-book-grid">
+              {booksForYou.map((book,i)=><a className="recommended-book-card" key={book.id} href={book.url} target="_blank" rel="noopener noreferrer">
+                <div className={`recommended-book-cover book-cover-${book.color}`} aria-hidden="true">
+                  <BookOpen size={24} />
+                  <span className="cover-rule"/>
+                  <strong dir="ltr">{book.title}</strong>
+                  <small dir="ltr">{book.author.split(',')[0]}</small>
+                </div>
+                <div className="recommended-book-info">
+                  <span className="recommended-book-label">{i===0?'ترشيحنا الأول':'مناسب ليك'} · {book.label}</span>
+                  <h4 dir="ltr">{book.title}</h4>
+                  <small dir="ltr">{book.author}</small>
+                  <p>{book.why}</p>
+                  <span className="book-mini-action"><CheckCircle2 size={14}/>{book.tryThis}</span>
+                  <span className="book-details-link">اعرف أكتر عن الكتاب <ExternalLink size={14}/></span>
+                </div>
+              </a>)}
+            </div>
+            <p className="resources-footnote">الكتب دي ترشيحات قراءة، مش علاج علمي مُعتمد. اختيارها حسب المحاور الأعلى في إجاباتك، مش تشخيص لحالتك.</p>
+          </section>
           <section className="plan-section" id="weekly-plan"><div className="section-top"><span className="section-kicker">خطة خفيفة</span><h2>تحدي 7 أيام — على راحتك</h2><p>اختار كل يوم خطوة صغيرة. لو فاتك يوم، كمل عادي.</p></div><div className="plan-list">{plan.map((d,i)=><label key={d.title} className={completed[i]?'plan-row completed':'plan-row'}><input type="checkbox" checked={!!completed[i]} onChange={e=>setCompleted(p=>({...p,[i]:e.target.checked}))}/><span className="plan-check"><Check size={17}/></span><span className="plan-text"><strong>اليوم {i+1} — {d.title}</strong><small>{d.text}</small></span></label>)}</div></section>
           <div className="results-actions"><button className="btn btn-primary" onClick={share}><Share2 size={18}/> شارك نتيجتك</button><button className="btn btn-soft" onClick={copy}><Copy size={18}/> انسخ الملخص</button><button className="btn btn-soft" onClick={()=>window.print()}><Download size={18}/> احفظ PDF</button><button className="btn btn-outline" onClick={reset}><RotateCcw size={17}/> إعادة الاختبار</button></div>
           {feedback && <p className="feedback" role="status">{feedback}</p>}
