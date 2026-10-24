@@ -38,6 +38,33 @@ describe('personalization for all 30 questions',()=>{
       }
     }
   })
+  it('gives distinct frequency-sensitive explanations to all five choices',()=>{
+    const outputs=[0,1,2,3,4].map(value=>{
+      const answers=filled(0);answers.f1=value
+      return buildPersonalReport(answers).questionReadings.find(x=>x.id==='f1')
+    })
+    expect(new Set(outputs.map(item=>item?.observation)).size).toBe(5)
+    expect(new Set(outputs.map(item=>item?.action)).size).toBe(5)
+  })
+  it('stays well-formed for diverse mixed response combinations',()=>{
+    let seed=7919
+    for(let run=0;run<100;run++){
+      const answers:Object=Object.fromEntries(questions.map(question=>{
+        seed=(seed*1664525+1013904223)>>>0
+        return [question.id,seed%5]
+      }))
+      const report=buildPersonalReport(answers as AnswerMap)
+      expect(report.questionReadings).toHaveLength(30)
+      expect(report.domainReadings).toHaveLength(6)
+      expect(report.actions.length).toBeGreaterThan(0)
+      expect(report.actions.length).toBeLessThanOrEqual(6)
+      expect(report.plan).toHaveLength(14)
+      for(const insight of report.questionReadings){
+        expect(insight.action.trim().length).toBeGreaterThan(12)
+        expect(insight.observation.trim().length).toBeGreaterThan(15)
+      }
+    }
+  })
   it('handles zero, maximum and mixed scores without confusing domains',()=>{
     for(const score of [0,1,2,3,4]){
       const answers=filled(score)
