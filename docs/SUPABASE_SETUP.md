@@ -55,3 +55,20 @@ See `SECURITY.md` for mandatory GitHub branch protection and future payment requ
 - App data remains in browser local storage until the user consents to the save action; local storage is not encrypted. Avoid claiming that deleting cloud history deletes local data.
 - Test with two distinct **real authenticated** test users before public release. No user accounts currently exist in the dedicated project, so real end-to-end email/OTP/RLS isolation flows remain unverified.
 - OTP signup templates and custom SMTP are still configured only as source files. Supabase Hosted Auth requires management-level controls absent from the available connector. Do not tell users live email OTP works before a test inbox receives and confirms the code.
+
+## Passwordless login via email OTP — code complete, provider activation pending
+
+- `AuthPage` now offers **Email code instead of password** to existing accounts.
+- It calls `supabase.auth.signInWithOtp({email, options:{shouldCreateUser:false}})`. It does not allow account creation through the sign-in-only flow.
+- Login OTP confirmation uses `supabase.auth.verifyOtp({email,token,type:'email'})`; signup confirmation uses `type:'signup'`. Unit tests cover this separation and the resend cooldown.
+- The **Magic Link** hosted email template must contain `{{ .Token }}` for a 6-digit code. Source-ready template is `supabase/email-templates/magic-link-otp.html`. Using the default `{{ .ConfirmationURL }}` template instead sends a clickable login link, not a code.
+- Signup confirmation template uses `supabase/email-templates/confirm-signup.html`.
+- Reset password template uses `supabase/email-templates/reset-password.html`.
+- When updating the hosted Auth templates, do **not** paste passwords, service keys or management API credentials into this repository or chat.
+- The connected Supabase plugin only supports project SQL/schema/Edge Functions, NOT hosted Auth configuration mutations. As a result, hosted Site URL, email template changes, Confirm Email, rate limits and SMTP have **not** been verified or changed.
+- Public email registration is NOT end-to-end verified. The built-in email sender may reject addresses outside the Supabase project's authorized team; use an SMTP provider with a verified sender domain before public launch.
+- A successful CodeQL/TypeScript/CI check means the code builds and unit tests pass; it does **not** prove OTP mail arrived.
+
+### RLS integration test evidence
+
+The system was tested with two temporary Postgres identities inside a single rolled-back transaction: user A could only select their own profile, could not update user B's profile, could update their own, and a submitted score of 0 was recomputed to 60 based on 30 answers set to 2. No test users or results remained in `auth.users`/`profiles`/`assessments` after rollback. This is a database authorization integration test, not a real Auth email-inbox acceptance test.
