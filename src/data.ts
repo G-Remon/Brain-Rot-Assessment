@@ -105,3 +105,31 @@ export function prioritizedRecommendations(answers:AnswerMap){
   }
   return selected.length ? selected : recommendations.filter(r=>['استرجع بدل ما تعيد القراءة','ثبّت معاد استيقاظك','جلسة تركيز واحدة بجد'].includes(r.title))
 }
+
+/** Reading suggestions are practical, not clinical prescriptions.
+ * Publisher/author sources are linked directly for each title.
+ */
+export type BookRecommendation = {
+  id: string
+  domain: DomainId
+  title: string
+  author: string
+  label: string
+  why: string
+  tryThis: string
+  url: string
+  color: string
+}
+export const bookRecommendations: BookRecommendation[] = [
+  {id:'deep-work',domain:'focus',title:'Deep Work',author:'Cal Newport',label:'لو تركيزك بيتقطع',why:'أفكاره عن الشغل العميق وتقليل المقاطعات هتفيدك لو صعب تكمل مهمة واحدة.',tryThis:'جرّب جلسة تركيز واحدة من غير موبايل.',url:'https://www.hachettebookgroup.com/titles/cal-newport/deep-work/9781455586691/',color:'navy'},
+  {id:'digital-minimalism',domain:'scroll',title:'Digital Minimalism',author:'Cal Newport',label:'لو التصفح بياخدك',why:'بيساعدك تفكر في استخدام التكنولوجيا باختيارك، بدل فتح التطبيقات تلقائيًا.',tryThis:'اختار التطبيقات اللي فعلًا بتضيف قيمة ليومك.',url:'https://www.penguinrandomhouse.com/books/575667/digital-minimalism-by-cal-newport/9780525536512/',color:'mint'},
+  {id:'indistractable',domain:'patience',title:'Indistractable',author:'Nir Eyal',label:'لو الملل بيشدّك للموبايل',why:'بيتكلّم عن مسببات التشتت وطرق عملية للتعامل معاها من غير منع التكنولوجيا بالكامل.',tryThis:'اكتب إمتى بتفتح الموبايل عشان تهرب من الملل.',url:'https://www.simonandschuster.com/books/Indistractable/Nir-Eyal/9781948836531',color:'coral'},
+  {id:'make-it-stick',domain:'memory',title:'Make It Stick',author:'Peter C. Brown, Henry L. Roediger III & Mark A. McDaniel',label:'لو عايز تفتكر اللي بتتعلمه',why:'بيشرح طرق مذاكرة واسترجاع معلومات أفضل من إعادة القراءة طول الوقت.',tryThis:'اقفل المصدر وجاوب من ذاكرتك بعد كل درس.',url:'https://www.makeitstick.com/',color:'indigo'},
+  {id:'sleep-solution',domain:'sleep',title:'The Sleep Solution',author:'W. Chris Winter, M.D.',label:'لو نومك مأثر على طاقتك',why:'كتاب من طبيب متخصص في النوم، عن فهم مشاكل النوم وعاداته.',tryThis:'سجّل مواعيد نومك وصحيانك لمدة 3 أيام.',url:'https://www.penguinrandomhouse.com/books/540559/the-sleep-solution-by-w-chris-winter-md/',color:'blue'},
+  {id:'four-thousand-weeks',domain:'impact',title:'Four Thousand Weeks',author:'Oliver Burkeman',label:'لو بتحس إن وقتك بيجري',why:'بيقدّم منظورًا أهدى لإدارة الوقت وتحديد الأولويات بدل محاولة تخلص كل حاجة.',tryThis:'اختار أهم مهمة واقعية لبكرة.',url:'https://us.macmillan.com/books/9781250849359/fourthousandweeks/',color:'sand'}
+]
+export function recommendBooks(answers: AnswerMap): BookRecommendation[] {
+  const ranked=[...bookRecommendations].sort((a,b)=>domainScore(answers,b.domain)-domainScore(answers,a.domain))
+  const relevant=ranked.filter(book=>domainScore(answers,book.domain)>=4)
+  return relevant.length ? relevant.slice(0,3) : [bookRecommendations[0], bookRecommendations[3]]
+}
