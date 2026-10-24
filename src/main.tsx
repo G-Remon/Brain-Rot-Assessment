@@ -6,6 +6,7 @@ import { domains, questions, options, domainScore, totalScore, getBand, recommen
 import { buildPersonalReport } from './personalization'
 import { AccountPage, AuthPage, type AuthMode } from './AuthPage'
 import { supabase } from './supabase'
+import { clearRecoveryRedirect, isRecoveryRedirect } from './auth-urls'
 import './style.css'
 
 type Screen = 'home' | 'quiz' | 'results' | 'science' | 'auth' | 'account'
@@ -74,13 +75,30 @@ function App() {
     }
     const {data:{subscription}} = supabase.auth.onAuthStateChange((event,session)=>{
       syncUser(session?.user ?? null)
-      if (event === 'PASSWORD_RECOVERY') {
+      if (session?.user && (event === 'PASSWORD_RECOVERY' || isRecoveryRedirect(window.location.search))) {
         setAuthMode('new-password')
         setScreen('auth')
+        clearRecoveryRedirect()
       }
     })
-    void supabase.auth.getUser().then(({data})=>syncUser(data.user ?? null))
-      .catch(()=>{/* Anonymous access to the quiz stays available offline. */})
+    void supabase.auth.getUser().then(({data})=>{
+      syncUser(data.user ?? null)
+      if (isRecoveryRedirect(window.location.search)) {
+        if (data.user) {
+          setAuthMode('new-password')
+        } else {
+          setAuthMode('forgot')
+        }
+        setScreen('auth')
+        clearRecoveryRedirect()
+      }
+    }).catch(()=>{
+      if (isRecoveryRedirect(window.location.search)) {
+        setAuthMode('forgot')
+        setScreen('auth')
+        clearRecoveryRedirect()
+      }
+    })
     return ()=>{mounted=false;subscription.unsubscribe()}
   },[])
   useEffect(()=>{localStorage.setItem(storageKey(KEY,storageOwner),JSON.stringify(answers))},[answers,storageOwner])
