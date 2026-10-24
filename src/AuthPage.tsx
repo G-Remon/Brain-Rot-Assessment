@@ -1,6 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import type { User } from '@supabase/supabase-js'
-import { ArrowLeft, CheckCircle2, Eye, EyeOff, KeyRound, LockKeyhole, LogOut, Mail, RotateCcw, ShieldCheck, UserRound } from 'lucide-react'
+import { ArrowLeft, Eye, EyeOff, KeyRound, LockKeyhole, Mail, ShieldCheck, UserRound } from 'lucide-react'
 import { normalizedEmail, validEmail, validOtp, validPassword } from './auth-validation'
 import { authRedirectUrl } from './auth-urls'
 import { supabase } from './supabase'
@@ -186,36 +185,4 @@ export function AuthPage({ initialMode = 'login', onDone, onBack }: AuthPageProp
       </div>
     </section>
   )
-}
-
-export function AccountPage({ user, onBack }: { user: User; onBack: () => void }) {
-  const [busy,setBusy] = useState(false)
-  const [error,setError] = useState('')
-  async function logout() {
-    if (!supabase || busy) return
-    setBusy(true);setError('')
-    try {
-      const { error: authError } = await supabase.auth.signOut()
-      if (authError) throw authError
-      onBack()
-    } catch {
-      setError('حصلت مشكلة في تسجيل الخروج. جرب تاني.')
-    } finally { setBusy(false) }
-  }
-  const displayName = typeof user.user_metadata?.display_name === 'string'
-    ? user.user_metadata.display_name : 'مستخدم MindReset'
-  return <section className="auth-section container">
-    <button className="auth-back" type="button" onClick={onBack}>الرجوع للموقع <ArrowLeft size={16}/></button>
-    <div className="auth-card account-card">
-      <div className="auth-emblem"><UserRound size={25}/></div>
-      <span className="section-kicker">حسابك الشخصي</span>
-      <h1>أهلاً، {displayName}</h1>
-      <p className="auth-description">تسجيل الدخول شغال. قريب هنربط تاريخ اختباراتك ولوحة أهدافك بحسابك.</p>
-      <div className="account-detail"><Mail size={18}/><span dir="ltr">{user.email}</span>{user.email_confirmed_at && <CheckCircle2 size={18} aria-label="الإيميل مؤكد"/>}</div>
-      <div className="auth-message notice">نتيجة الاختبار الحالية محفوظة على المتصفح فقط لحد ما نفعّل جداول حفظ النتائج، عشان منوعدكش بمزامنة لسه مش جاهزة.</div>
-      {error&&<div className="auth-message error" role="alert">{error}</div>}
-      <button type="button" className="account-logout" onClick={logout} disabled={busy}><LogOut size={18}/>{busy?'جاري الخروج...':'تسجيل الخروج'}</button>
-      <button type="button" className="auth-quiet" onClick={()=>window.location.reload()}><RotateCcw size={15}/> تحديث حالة الحساب</button>
-    </div>
-  </section>
 }
