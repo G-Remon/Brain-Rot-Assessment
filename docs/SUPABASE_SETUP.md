@@ -44,3 +44,14 @@ Project: `acofddiawbhbwhcgekrk` (separate from STC/iChem).
 Implement an explicit **Save my results to my account** action, with user's permission, and show history via authenticated RLS queries. Do not silently upload anonymous local answers. Assessments from the frontend are subjective self-reports, not trusted payment claims.
 
 See `SECURITY.md` for mandatory GitHub branch protection and future payment requirements.
+
+## Account dashboard & saved results (phase 1.2)
+
+- Results are NOT automatically uploaded. A user must explicitly choose **Save result** inside their account. A pre-sign-in guest test must be explicitly imported by the user.
+- `src/assessment-history.ts` checks all 30 answer keys and each response (0 to 4) before saving, rechecks identity, retrieves the user's most recent 40 saved results, and supports opening/deleting results.
+- The cloud history uses `public.assessments` with RLS on `user_id = auth.uid()`. A private PostgreSQL trigger validates server-side: 30 known answers, 0–4 whole number responses, recomputes the score, and limits an account to 20 new saves per rolling 24-hour period.
+- `src/account-profile.ts` supports editing the user's display name only. It cannot update a PRO flag or modify another user's profile.
+- Users can delete one cloud assessment or all of them. They can review saved score history without overwriting their local quiz; opening a historical score asks before replacing unfinished work.
+- App data remains in browser local storage until the user consents to the save action; local storage is not encrypted. Avoid claiming that deleting cloud history deletes local data.
+- Test with two distinct **real authenticated** test users before public release. No user accounts currently exist in the dedicated project, so real end-to-end email/OTP/RLS isolation flows remain unverified.
+- OTP signup templates and custom SMTP are still configured only as source files. Supabase Hosted Auth requires management-level controls absent from the available connector. Do not tell users live email OTP works before a test inbox receives and confirms the code.
