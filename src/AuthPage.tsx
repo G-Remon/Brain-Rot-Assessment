@@ -113,14 +113,22 @@ export function AuthPage({ initialMode = 'login', onDone, onBack }: AuthPageProp
         setConfirmPassword('')
         onDone()
       }
-    } catch {
-      setError(mode === 'login'
-        ? 'مش قادرين نسجل دخولك. راجع بياناتك وتأكيد الإيميل وجرب تاني.'
-        : mode === 'otp'
-          ? 'الكود غير صحيح أو منتهي الصلاحية. راجع الرسالة أو اطلب كود جديد.'
-          : mode === 'new-password'
-            ? 'رابط الاسترجاع منتهي أو الجلسة غير صالحة. اطلب رابط جديد من شاشة نسيت كلمة المرور.'
-            : 'تعذّر إرسال الرسالة أو تنفيذ الطلب. اتأكد من إعدادات إرسال البريد في Supabase وجرب تاني.')
+    } catch (failure) {
+      const code = failure && typeof failure === 'object' && 'code' in failure
+        ? String(failure.code) : ''
+      setError(code === 'email_address_not_authorized'
+        ? 'خدمة البريد التجريبية لا تسمح بإرسال الرسائل للإيميل ده حاليًا. لازم تفعيل مزوّد SMTP قبل فتح التسجيل للعامة.'
+        : code.includes('rate_limit') || code === 'over_email_send_rate_limit'
+          ? 'تم إرسال طلبات كثيرة خلال وقت قصير. استنى شوية وحاول تاني.'
+          : code === 'email_not_confirmed'
+            ? 'الحساب محتاج تأكيد الإيميل قبل تسجيل الدخول. راجع رسالة التأكيد.'
+            : mode === 'login'
+              ? 'مش قادرين نسجل دخولك. راجع بياناتك وتأكيد الإيميل وجرب تاني.'
+              : mode === 'otp'
+                ? 'الكود غير صحيح أو منتهي الصلاحية. راجع الرسالة أو اطلب كود جديد.'
+                : mode === 'new-password'
+                  ? 'رابط الاسترجاع منتهي أو الجلسة غير صالحة. اطلب رابط جديد من شاشة نسيت كلمة المرور.'
+                  : 'تعذّر إرسال الرسالة أو تنفيذ الطلب. راجع إعدادات إرسال البريد وجرب تاني.')
     } finally {
       setBusy(false)
     }
@@ -203,7 +211,7 @@ export function AccountPage({ user, onBack }: { user: User; onBack: () => void }
       <span className="section-kicker">حسابك الشخصي</span>
       <h1>أهلاً، {displayName}</h1>
       <p className="auth-description">تسجيل الدخول شغال. قريب هنربط تاريخ اختباراتك ولوحة أهدافك بحسابك.</p>
-      <div className="account-detail"><Mail size={18}/><span dir="ltr">{user.email}</span><CheckCircle2 size={18}/></div>
+      <div className="account-detail"><Mail size={18}/><span dir="ltr">{user.email}</span>{user.email_confirmed_at && <CheckCircle2 size={18} aria-label="الإيميل مؤكد"/>}</div>
       <div className="auth-message notice">نتيجة الاختبار الحالية محفوظة على المتصفح فقط لحد ما نفعّل جداول حفظ النتائج، عشان منوعدكش بمزامنة لسه مش جاهزة.</div>
       {error&&<div className="auth-message error" role="alert">{error}</div>}
       <button type="button" className="account-logout" onClick={logout} disabled={busy}><LogOut size={18}/>{busy?'جاري الخروج...':'تسجيل الخروج'}</button>
