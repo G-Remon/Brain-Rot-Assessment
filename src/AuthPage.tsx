@@ -68,6 +68,7 @@ export function AuthPage({ onBack, oauthError = false }: AuthPageProps) {
             إجابات الاختبار مش بتترفع للسحابة إلا لما تختار حفظها بنفسك.
           </span>
         </div>
+        <a className="auth-policy-link" href="/privacy.html">اقرأ سياسة الخصوصية</a>
       </div>
     </section>
   )
