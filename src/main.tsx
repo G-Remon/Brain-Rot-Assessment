@@ -43,7 +43,7 @@ function App() {
   })
   useEffect(()=>{localStorage.setItem(KEY,JSON.stringify(answers))},[answers])
   useEffect(()=>{localStorage.setItem(PLAN_KEY,JSON.stringify(completed))},[completed])
-  useEffect(()=>{window.scrollTo({top:0,behavior:'instant'})},[screen])
+  useEffect(()=>{window.scrollTo({top:0,behavior:'instant'})},[screen,index])
   const answered=Object.keys(answers).length
   const question=questions[index]
   const score=totalScore(answers)
