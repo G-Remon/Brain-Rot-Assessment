@@ -1,23 +1,32 @@
-name: React build check
-
+name: React build and dependency security
 on:
   push:
     branches: [main]
   pull_request:
-
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout source
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: '22'
       - name: Install dependencies
         run: npm install --no-audit --no-fund
+      - name: Audit production dependencies for high-severity known issues
+        run: npm audit --omit=dev --audit-level=high
       - name: Typecheck
         run: npm run check
-      - name: Analyze all response paths
+      - name: Test assessment and account input paths
         run: npm run test
       - name: Production build
         run: npm run build
