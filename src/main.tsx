@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 import { createRoot } from 'react-dom/client'
 import { Activity, ArrowLeft, ArrowRight, BookOpen, Check, CheckCircle2, ChevronLeft, Clock3, Copy, Download, ExternalLink, Heart, Lightbulb, LockKeyhole, Menu, Moon, RotateCcw, Share2, ShieldCheck, Smartphone, Sparkles, Target, X, Zap, BrainCircuit, Play } from 'lucide-react'
-import { domains, questions, options, domainScore, totalScore, getBand, prioritizedRecommendations, recommendBooks, sources, type AnswerMap } from './data'
+import { domains, questions, options, domainScore, totalScore, getBand, recommendBooks, sources, type AnswerMap } from './data'
+import { buildPersonalReport } from './personalization'
 import './style.css'
 
 type Screen = 'home' | 'quiz' | 'results' | 'science'
 const KEY = 'mindreset-assessment-v1'
-const PLAN_KEY = 'mindreset-plan-v1'
+const PLAN_KEY = 'mindreset-plan-v2'
 const steps = ['افهم عاداتك', 'شوف تحليلك', 'ابدأ بخطوة بسيطة']
 const books = [
   { title: 'Deep Work', subtitle: 'الشغل بتركيز ومن غير مقاطعات', author: 'Cal Newport', tag: 'التركيز', mark: '01', description: 'استلهمنا منه أفكار تنظيم جلسات الشغل العميق وتقليل المشتتات.' },
@@ -49,7 +50,7 @@ function App() {
   const score=totalScore(answers)
   const band=getBand(score)
   const ranked=useMemo(()=>[...domains].map(d=>({...d,score:domainScore(answers,d.id)})).sort((a,b)=>b.score-a.score),[answers])
-  const recs=useMemo(()=>prioritizedRecommendations(answers),[answers])
+  const personal=useMemo(()=>buildPersonalReport(answers),[answers])
   const booksForYou=useMemo(()=>recommendBooks(answers),[answers])
   const mainAreas=ranked.filter(d=>d.score>=5).slice(0,3)
   const allAnswered=answered===questions.length
@@ -95,15 +96,7 @@ function App() {
     try { await navigator.clipboard.writeText(shareText);setFeedback('اتنسخت النتيجة بنجاح') }
     catch { setFeedback('النسخ مش متاح في المتصفح ده. جرب مشاركة النتيجة.') }
   }
-  const plan=[
-    {title:'حدد وقتك',text:'اكتب أهم مهمة عندك، وإمتى هتبدأها.'},
-    {title:'وقت تركيز',text:'اشتغل 25 دقيقة على مهمة واحدة من غير إشعارات.'},
-    {title:'استرجع اللي اتعلمته',text:'اقفل الشرح واكتب 3 معلومات من ذاكرتك.'},
-    {title:'لاحظ عادة',text:'دوّن إمتى مسكت الموبايل تلقائيًا.'},
-    {title:'اهتم بنومك',text:'جرب روتين هادي قبل النوم.'},
-    {title:'كرر الأنسب ليك',text:'اختار أكتر خطوة نفعتك وكررها.'},
-    {title:'راجع من غير جلد ذات',text:'لاحظ اللي اتحسن وإيه محتاج تغييره الأسبوع الجاي.'}
-  ]
+  const plan=personal.plan
   return (
     <div className="app-shell">
       <header className="site-header">
@@ -171,32 +164,102 @@ function App() {
         </section>}
         {screen==='results' && allAnswered && <div className="container results-page">
           <div className="results-intro"><span className="section-kicker">خلصت! عاش إنك كملت 👏</span><h1>دي صورتك الحالية...<br/><span className="highlight">مش حكم عليك.</span></h1><p>النتيجة بتلخّص إجاباتك عن آخر 14 يوم، مش بتحدد ذكاءك أو «نسبة ضرر دماغك».</p></div>
-          <div className="result-shortcuts"><button onClick={()=>document.getElementById('solutions')?.scrollIntoView({behavior:'smooth'})}>شوف الحلول اللي تناسبك <ArrowLeft size={16}/></button><button onClick={()=>document.getElementById('weekly-plan')?.scrollIntoView({behavior:'smooth'})}>خطة الأسبوع <ChevronLeft size={16}/></button></div>
+          <div className="result-shortcuts"><button onClick={()=>document.getElementById('solutions')?.scrollIntoView({behavior:'smooth'})}>شوف الحلول اللي تناسبك <ArrowLeft size={16}/></button><button onClick={()=>document.getElementById('weekly-plan')?.scrollIntoView({behavior:'smooth'})}>خطة الـ14 يوم <ChevronLeft size={16}/></button></div>
           <div className="results-grid">
             <article className="score-card"><span className="card-eyebrow">مجموع الإجابات</span><div className="score-ring" style={{'--amount':`${score/120*100}%`} as CSSProperties}><div><strong>{score}</strong><span>من 120</span></div></div><div className="band-pill">{band.title}</div><p>{band.note}</p><small>تصنيفات وصفية من تصميم الموقع، مش حدود تشخيصية معتمدة.</small></article>
             <article className="breakdown-card"><div className="card-heading"><h2>تفصيل المحاور</h2><span>من 20 لكل محور</span></div>{ranked.map(d=><div className="score-line" key={d.id}><div className="score-name"><span><IconFor name={d.icon} size={17}/>{d.title}</span><b>{d.score}<small>/20</small></b></div><div className="bar-track"><span style={{width:`${d.score*5}%`}} className={d.score>=12?'bar-high':d.score>=7?'bar-mid':'bar-low'}/></div></div>)}</article>
           </div>
           <section className="insight-card"><div className="insight-symbol"><Sparkles size={28}/></div><div><span className="section-kicker">إيه اللي لفت نظرنا؟</span><h2>{mainAreas.length ? `أكتر جانب محتاج اهتمام: ${mainAreas[0].title}` : 'إجاباتك بتشير لصعوبات قليلة نسبيًا'}</h2><p>{mainAreas.length? `إجاباتك في ${mainAreas.map(d=>d.title).join('، ')} كانت أعلى نسبيًا من باقي المحاور. خلّينا نبدأ بعادة بسيطة بدل محاولة تغيير كل حاجة مرة واحدة.`:'حلو إن معظم المؤشرات قليلة. تقدر تركز على الحفاظ على العادات اللي بتساعدك في التعلم والنوم.'}</p></div></section>
-          <section className="advice-section" id="solutions"><div className="section-top"><span className="section-kicker">خطوات مناسبة لإجاباتك</span><h2>تقدر تبدأ بإيه من النهارده؟</h2><p>اقتراحات عملية مرتبطة بالجوانب الأعلى في إجاباتك، مش وصفة علاجية.</p></div><div className="advice-grid">{recs.map((r,i)=><article className="advice-card" key={r.title}><span className="advice-count">{String(i+1).padStart(2,'0')}</span><h3>{r.title}</h3><p>{r.description}</p><div className="advice-action"><Zap size={17}/><span>{r.action}</span></div><div className="evidence"><BookOpen size={15}/>{r.evidence} <a href={sources.find(s=>s.id===r.sourceId)?.url} target="_blank" rel="noopener noreferrer">المصدر <ExternalLink size={12}/></a></div></article>)}</div></section>
+
+          <section className="detailed-analysis" id="analysis">
+            <div className="section-top">
+              <span className="section-kicker">01 — تحليل المحاور</span>
+              <h2>كل محور بيقول إيه عن إجاباتك؟</h2>
+              <p>درجات وصفية بتساعدك ترتّب الأولويات. دي مش نتيجة اختبار طبي.</p>
+            </div>
+            <div className="domain-analysis-grid">{personal.domainReadings.map(domain=><article key={domain.id} className="domain-analysis-card">
+              <div className="domain-analysis-head"><span><IconFor name={domains.find(d=>d.id===domain.id)?.icon || 'activity'} size={18}/>{domain.title}</span><strong>{domain.score}/20</strong></div>
+              <span className={'signal-pill '+(domain.positive?'positive':'needs-attention')}>{domain.label}</span>
+              <p>{domain.explanation}</p>
+            </article>)}</div>
+          </section>
+          <section className="individual-analysis">
+            <div className="section-top">
+              <span className="section-kicker">02 — تفاصيل الإجابات</span>
+              <h2>إيه بالضبط اللي ظهر في إجاباتك؟</h2>
+              <p>مش بنكتفي بمجموع المحور؛ كل سؤال ليه معنى وخطوة عملية مناسبة لإجابتك.</p>
+            </div>
+            <div className="priority-list">
+              {personal.priorities.length>0?personal.priorities.slice(0,4).map(insight=><article className="priority-card" key={insight.id}>
+                <div className="priority-head"><strong>{insight.title}</strong><span>{insight.answerLabel}</span></div>
+                <p>{insight.observation}</p>
+                <div className="priority-action"><Zap size={16}/><span>{insight.action}</span></div>
+              </article>):<article className="priority-card calm-priority"><CheckCircle2 size={25}/><div><strong>مفيش مؤشرات متكررة واضحة في إجاباتك</strong><p>ممكن تركز على تثبيت عاداتك الحالية واختيار خطوة واحدة لتحسين التعلم أو النوم.</p></div></article>}
+            </div>
+            {personal.strengths.length>0&&<div className="strength-box"><CheckCircle2 size={21}/><div><strong>حاجات ماشية معاك كويس</strong><p>{personal.strengths.map(item=>item.title).join(' • ')}</p></div></div>}
+            <details className="all-answers-details">
+              <summary><span><BookOpen size={18}/> شوف تفسير كل الـ30 إجابة</span><ChevronLeft size={18}/></summary>
+              <p className="details-intro">كل تفسير مبني على اختيارك في السؤال نفسه. إجابة «نادرًا» أو «أبدًا» مش هنعتبرها مشكلة.</p>
+              {domains.map(domain=><details className="domain-answer-group" key={domain.id}>
+                <summary><span>{domain.title}</span><span>5 أسئلة <ChevronLeft size={14}/></span></summary>
+                <div>{personal.questionReadings.filter(item=>item.domain===domain.id).map(item=><article className="question-reading" key={item.id}>
+                  <div className="question-reading-head"><strong>{item.title}</strong><span className={item.level==='strength'?'reading-light':'reading-mark'}>{item.answerLabel}</span></div>
+                  <p>{item.observation}</p>
+                  {item.answer>0&&<small><Lightbulb size={14}/>{item.action}</small>}
+                </article>)}</div>
+              </details>)}
+            </details>
+          </section>
+          <section className="pattern-analysis">
+            <div className="section-top">
+              <span className="section-kicker">03 — الربط والخطة</span>
+              <h2>أنماط ممكن تكون مرتبطة ببعض</h2>
+              <p>بنربط إجابات محددة لما تتكرر مع بعض، لكن مش بنستنتج منها تشخيص أو علاقة سبب ونتيجة.</p>
+            </div>
+            {personal.patterns.length>0?<div className="patterns-grid">{personal.patterns.map(pattern=><article className="pattern-card" key={pattern.id}>
+              <div className="pattern-icon"><BrainCircuit size={21}/></div><h3>{pattern.title}</h3><p>{pattern.description}</p>
+              <div className="pattern-solution"><CheckCircle2 size={17}/><span>{pattern.action}</span></div>
+            </article>)}</div>:<div className="no-patterns"><CheckCircle2 size={23}/><div><strong>مش ظاهر نمط متكرر واضح من اللي بنراجعها</strong><p>ده مش معناه إن كل حاجة مثالية؛ بس مفيش داعي نخترع مشكلة من إجاباتك.</p></div></div>}
+          </section>
+          <section className="advice-section" id="solutions">
+            <div className="section-top">
+              <span className="section-kicker">خطوات مختارة لإجاباتك</span>
+              <h2>ابدأ بإيه فعلًا؟</h2>
+              <p>أول اقتراحات هنا جاية من الأنماط والأسئلة اللي ظهرت عندك. اختار خطوة أو اتنين بس.</p>
+            </div>
+            <div className="advice-grid">{personal.actions.map((action,i)=><article className="advice-card" key={action.id}>
+              <span className="advice-count">{String(i+1).padStart(2,'0')}</span>
+              <h3>{action.title}</h3>
+              <p>{action.description}</p>
+              <div className="advice-action"><Zap size={17}/><span>ليه الاقتراح ده؟ {action.reason}</span></div>
+              <div className="evidence"><BookOpen size={15}/> اقتراح سلوكي للتجربة، مش علاج. <a href={sources.find(source=>source.id===action.sourceId)?.url} target="_blank" rel="noopener noreferrer">مرجع للمجال <ExternalLink size={12}/></a></div>
+            </article>)}</div>
+          </section>
           <section className="more-help-section" id="resources">
             <div className="section-top">
               <span className="section-kicker">لو حابب تتعمق شوية</span>
               <h2>فيديو وكتب تساعدك تكمل</h2>
               <p>اختيارات تساعدك تفهم عاداتك وتجرب حلول بسيطة، مش بديل عن تقييم متخصص لو عندك مشكلة مستمرة.</p>
             </div>
-            <a className="video-recommendation" href="https://www.youtube.com/watch?v=Lfs9LrpEUf0" target="_blank" rel="noopener noreferrer" aria-label="شاهد فيديو الدحيح: لماذا لا نستطيع قراءة الكتب؟ على يوتيوب">
-              <div className="video-poster">
-                <img src="https://i.ytimg.com/vi/Lfs9LrpEUf0/hqdefault.jpg" loading="lazy" alt="صورة مصغرة لفيديو الدحيح: لماذا لا نستطيع قراءة الكتب؟" />
-                <div className="video-play"><Play size={26} fill="currentColor" aria-hidden="true" /></div>
-                <span className="video-youtube">YouTube</span>
-              </div>
-              <div className="video-description">
-                <span className="video-eyebrow"><Sparkles size={15}/> فيديو يستاهل تشوفه</span>
-                <h3>لماذا لا نستطيع قراءة الكتب؟</h3>
-                <p>الدحيح • لو حاسس إن القراءة الطويلة بقت تقيلة عليك، الفيديو ده نقطة بداية لطيفة للتفكير في الموضوع.</p>
-                <span className="video-link">اتفرج على الفيديو <ExternalLink size={16}/></span>
-              </div>
-            </a>
+
+            <div className="video-library">
+              {personal.videos.map((video,i)=><a className={'video-resource '+(i===0?'featured-video':'')} key={video.id} href={video.url} target="_blank" rel="noopener noreferrer">
+                <div className="video-poster">
+                  <img src={'https://i.ytimg.com/vi/'+video.id+'/hqdefault.jpg'} loading="lazy" alt={'صورة فيديو '+video.title} />
+                  <div className="video-play"><Play size={i===0?24:20} fill="currentColor" aria-hidden="true"/></div>
+                  <span className="video-youtube">YouTube</span>
+                </div>
+                <div className="video-description">
+                  <span className="video-eyebrow"><Sparkles size={15}/>{i===0?'مناسب لأولوياتك':'فيديو عربي إضافي'}</span>
+                  <h3>{video.title}</h3>
+                  <small className="video-creator">{video.creator}</small>
+                  <p>{video.description}</p>
+                  <span className="video-link">افتح الفيديو <ExternalLink size={16}/></span>
+                  <small className="video-note">{video.note}</small>
+                </div>
+              </a>)}
+            </div>
+            <p className="video-education-note">الفيديوهات للتثقيف والتحفيز فقط؛ المحتوى المرئي مش بديل عن الأبحاث، ومش كل الكلام عن «الدوبامين ديتوكس» دقيق علميًا.</p>
             <div className="recommended-books-header">
               <div><span className="section-kicker">على حسب إجاباتك</span><h3>كتب ممكن تفيدك</h3></div>
               <span>ابدأ بكتاب واحد بس</span>
@@ -221,7 +284,7 @@ function App() {
             </div>
             <p className="resources-footnote">الكتب دي ترشيحات قراءة، مش علاج علمي مُعتمد. اختيارها حسب المحاور الأعلى في إجاباتك، مش تشخيص لحالتك.</p>
           </section>
-          <section className="plan-section" id="weekly-plan"><div className="section-top"><span className="section-kicker">خطة خفيفة</span><h2>تحدي 7 أيام — على راحتك</h2><p>اختار كل يوم خطوة صغيرة. لو فاتك يوم، كمل عادي.</p></div><div className="plan-list">{plan.map((d,i)=><label key={d.title} className={completed[i]?'plan-row completed':'plan-row'}><input type="checkbox" checked={!!completed[i]} onChange={e=>setCompleted(p=>({...p,[i]:e.target.checked}))}/><span className="plan-check"><Check size={17}/></span><span className="plan-text"><strong>اليوم {i+1} — {d.title}</strong><small>{d.text}</small></span></label>)}</div></section>
+          <section className="plan-section" id="weekly-plan"><div className="section-top"><span className="section-kicker">خطة خفيفة</span><h2>خطة 14 يوم على مقاس إجاباتك</h2><p>الخطوات بتتحدد حسب إجاباتك وأنماطك. مش مطلوب تنفذ كل حاجة بنفس الشدة أو تتخلى عن الترفيه.</p></div><div className="plan-list">{plan.map((d,i)=><label key={d.day} className={completed[i]?'plan-row completed':'plan-row'}><input type="checkbox" checked={!!completed[i]} onChange={e=>setCompleted(p=>({...p,[i]:e.target.checked}))}/><span className="plan-check"><Check size={17}/></span><span className="plan-text"><strong>اليوم {d.day} — {d.title}</strong><small>{d.task}</small><em>{d.why}</em></span></label>)}</div></section>
           <div className="results-actions"><button className="btn btn-primary" onClick={share}><Share2 size={18}/> شارك نتيجتك</button><button className="btn btn-soft" onClick={copy}><Copy size={18}/> انسخ الملخص</button><button className="btn btn-soft" onClick={()=>window.print()}><Download size={18}/> احفظ PDF</button><button className="btn btn-outline" onClick={reset}><RotateCcw size={17}/> إعادة الاختبار</button></div>
           {feedback && <p className="feedback" role="status">{feedback}</p>}
           <p className="results-disclaimer"><ShieldCheck size={17}/> لو صعوبات التركيز أو النوم مؤثرة على حياتك بشكل واضح ومستمر، الأفضل تكلم مختص. الاختبار مش بديل عن تقييم طبي أو نفسي.</p>
