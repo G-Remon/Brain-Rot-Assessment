@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { ArrowLeft, BookOpenCheck, CalendarDays, CheckCircle2, CloudUpload, History, LogOut, Mail, RefreshCcw, ShieldCheck, Trash2, UserRound } from 'lucide-react'
-import { getBand, questions, type AnswerMap } from './data'
+import { getBand, type AnswerMap } from './data'
 import { deleteSavedAssessment, listSavedAssessments, saveAssessment, snapshotKey, type SavedAssessment } from './assessment-history'
 import { supabase } from './supabase'
 
