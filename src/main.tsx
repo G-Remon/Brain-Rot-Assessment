@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react'
+import type { User } from '@supabase/supabase-js'
 import { createRoot } from 'react-dom/client'
-import { Activity, ArrowLeft, ArrowRight, BookOpen, Check, CheckCircle2, ChevronLeft, Clock3, Copy, Download, ExternalLink, Heart, Lightbulb, LockKeyhole, Menu, Moon, RotateCcw, Share2, ShieldCheck, Smartphone, Sparkles, Target, X, Zap, BrainCircuit, Play } from 'lucide-react'
+import { Activity, ArrowLeft, ArrowRight, BookOpen, Check, CheckCircle2, ChevronLeft, Clock3, Copy, Download, ExternalLink, Heart, Lightbulb, LockKeyhole, Menu, Moon, RotateCcw, Share2, ShieldCheck, Smartphone, Sparkles, Target, X, Zap, BrainCircuit, Play, UserRound } from 'lucide-react'
 import { domains, questions, options, domainScore, totalScore, getBand, recommendBooks, sources, type AnswerMap } from './data'
 import { buildPersonalReport } from './personalization'
+import { AccountPage, AuthPage, type AuthMode } from './AuthPage'
+import { supabase } from './supabase'
 import './style.css'
 
-type Screen = 'home' | 'quiz' | 'results' | 'science'
+type Screen = 'home' | 'quiz' | 'results' | 'science' | 'auth' | 'account'
 const KEY = 'mindreset-assessment-v1'
 const PLAN_KEY = 'mindreset-plan-v2'
 const steps = ['افهم عاداتك', 'شوف تحليلك', 'ابدأ بخطوة بسيطة']
@@ -35,6 +38,8 @@ function readStored(): AnswerMap {
 }
 function App() {
   const [screen,setScreen]=useState<Screen>('home')
+  const [user,setUser]=useState<User|null>(null)
+  const [authMode,setAuthMode]=useState<AuthMode>('login')
   const [answers,setAnswers]=useState<AnswerMap>(readStored)
   const [index,setIndex]=useState(0)
   const [showMenu,setShowMenu]=useState(false)
@@ -42,6 +47,22 @@ function App() {
   const [completed,setCompleted]=useState<Record<number,boolean>>(()=>{
     try { const value=JSON.parse(localStorage.getItem(PLAN_KEY)||'{}');return value && typeof value==='object' && !Array.isArray(value) ? value : {} }catch{return {}}
   })
+  useEffect(()=>{
+    if (!supabase) return
+    let mounted = true
+    const {data:{subscription}} = supabase.auth.onAuthStateChange((event,session)=>{
+      if (!mounted) return
+      setUser(session?.user ?? null)
+      if (event === 'PASSWORD_RECOVERY') {
+        setAuthMode('new-password')
+        setScreen('auth')
+      }
+    })
+    void supabase.auth.getUser().then(({data})=>{
+      if (mounted && data.user) setUser(data.user)
+    }).catch(()=>{})
+    return ()=>{mounted=false;subscription.unsubscribe()}
+  },[])
   useEffect(()=>{localStorage.setItem(KEY,JSON.stringify(answers))},[answers])
   useEffect(()=>{localStorage.setItem(PLAN_KEY,JSON.stringify(completed))},[completed])
   useEffect(()=>{window.scrollTo({top:0,behavior:'instant'})},[screen,index])
@@ -54,6 +75,11 @@ function App() {
   const booksForYou=useMemo(()=>recommendBooks(answers),[answers])
   const mainAreas=ranked.filter(d=>d.score>=5).slice(0,3)
   const allAnswered=answered===questions.length
+  function openAccount() {
+    if (user) setScreen('account')
+    else { setAuthMode('login'); setScreen('auth') }
+    setShowMenu(false)
+  }
   function startQuiz() {
     const missing=questions.findIndex(q=>answers[q.id]===undefined)
     setIndex(missing>=0?missing:0)
@@ -112,6 +138,7 @@ function App() {
           </nav>
           <div className="nav-actions">
             <button className="nav-start" onClick={startQuiz}>{answered>0 && !allAnswered?'كمّل اختبارك':'ابدأ الاختبار'} <ArrowLeft size={17}/></button>
+            <button className="nav-account" onClick={openAccount} aria-label={user?'حسابي':'تسجيل الدخول'}><UserRound size={17}/><span>{user?'حسابي':'دخول / حساب'}</span></button>
             <button className="menu-toggle" onClick={()=>setShowMenu(p=>!p)} aria-label={showMenu?'قفل القائمة':'افتح القائمة'}>{showMenu?<X/>:<Menu/>}</button>
           </div>
         </div>
@@ -290,6 +317,8 @@ function App() {
           <p className="results-disclaimer"><ShieldCheck size={17}/> لو صعوبات التركيز أو النوم مؤثرة على حياتك بشكل واضح ومستمر، الأفضل تكلم مختص. الاختبار مش بديل عن تقييم طبي أو نفسي.</p>
         </div>}
         {screen==='results' && !allAnswered && <section className="container empty-result"><h1>لسه عندك شوية أسئلة</h1><p>كمّل الاختبار الأول عشان يطلعلك التقرير.</p><button className="btn btn-primary" onClick={startQuiz}>كمّل الأسئلة <ArrowLeft size={18}/></button></section>}
+        {screen==='auth' && <AuthPage initialMode={authMode} onDone={()=>setScreen('account')} onBack={()=>setScreen('home')}/>}
+        {screen==='account' && (user ? <AccountPage user={user} onBack={()=>setScreen('home')}/> : <AuthPage onDone={()=>setScreen('account')} onBack={()=>setScreen('home')}/>)}
         {screen==='science' && <div className="container science-page">
           <span className="section-kicker">من الآخر، وبوضوح</span><h1>الموقع ده مبني على إيه؟</h1>
           <p className="science-lead">مصطلح «تعفن الدماغ» أو Brain Rot تعبير منتشر، مش اسم مرض أو تشخيص طبي. عشان كده هنا بنقيّم عادات وسلوكيات بيبلغ عنها الشخص بنفسه، مش بنقيس صحة دماغه.</p>
@@ -302,7 +331,7 @@ function App() {
           <div className="science-bottom"><h2>خلينا نفهم عاداتك من غير أحكام.</h2><button className="btn btn-primary" onClick={startQuiz}>ابدأ الاختبار <ArrowLeft size={18}/></button></div>
         </div>}
       </main>
-      <footer className="footer"><div className="container footer-inner"><div className="footer-brand"><BrainCircuit size={21}/> <strong>mindreset</strong><span>افهم عاداتك. اختار براحتك.</span></div><div className="footer-links"><button onClick={()=>setScreen('science')}>العلم والمصادر</button><button onClick={()=>setScreen('home')}>الرئيسية</button></div><p>تقييم ذاتي للتوعية فقط — مش تشخيص طبي. © {new Date().getFullYear()} MindReset</p></div></footer>
+      <footer className="footer"><div className="container footer-inner"><div className="footer-brand"><BrainCircuit size={21}/> <strong>mindreset</strong><span>افهم عاداتك. اختار براحتك.</span></div><div className="footer-links"><button onClick={()=>setScreen('science')}>العلم والمصادر</button><button onClick={()=>setScreen('home')}>الرئيسية</button></div><div className="footer-credit"><p>تقييم ذاتي للتوعية فقط — مش تشخيص طبي. © {new Date().getFullYear()} MindReset</p><span>Developed by <strong>Gerges Remon</strong></span></div></div></footer>
     </div>
   )
 }
