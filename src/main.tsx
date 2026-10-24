@@ -4,11 +4,11 @@ import { createRoot } from 'react-dom/client'
 import { Activity, ArrowLeft, ArrowRight, BookOpen, Check, CheckCircle2, ChevronLeft, Clock3, Copy, Download, ExternalLink, Heart, Lightbulb, LockKeyhole, Menu, Moon, RotateCcw, Share2, ShieldCheck, Smartphone, Sparkles, Target, X, Zap, BrainCircuit, Play, UserRound } from 'lucide-react'
 import { domains, questions, options, domainScore, totalScore, getBand, recommendBooks, sources, type AnswerMap } from './data'
 import { buildPersonalReport } from './personalization'
-import { AuthPage, type AuthMode } from './AuthPage'
+import { AuthPage } from './AuthPage'
 import { AccountPage } from './AccountPage'
 import { snapshotKey, validatedAssessment, type SavedAssessment } from './assessment-history'
 import { supabase } from './supabase'
-import { clearRecoveryRedirect, isRecoveryRedirect } from './auth-urls'
+import { clearGoogleRedirect, hasGoogleAuthError, isGoogleRedirect } from './auth-urls'
 import './style.css'
 
 type Screen = 'home' | 'quiz' | 'results' | 'science' | 'auth' | 'account'
@@ -50,9 +50,9 @@ function readPlanStored(owner: string): Record<number,boolean> {
   } catch { return {} }
 }
 function App() {
-  const [screen,setScreen]=useState<Screen>('home')
+  const [screen,setScreen]=useState<Screen>(()=>isGoogleRedirect(window.location.search)?'auth':'home')
   const [user,setUser]=useState<User|null>(null)
-  const [authMode,setAuthMode]=useState<AuthMode>('login')
+  const [oauthError,setOauthError]=useState(()=>hasGoogleAuthError(window.location.search))
   const [storageOwner,setStorageOwner]=useState('guest')
   const storageOwnerRef=useRef('guest')
   const [answers,setAnswers]=useState<AnswerMap>(()=>readStored('guest'))
@@ -74,31 +74,29 @@ function App() {
         setIndex(0)
       }
       setUser(nextUser)
-    }
-    const {data:{subscription}} = supabase.auth.onAuthStateChange((event,session)=>{
-      syncUser(session?.user ?? null)
-      if (session?.user && (event === 'PASSWORD_RECOVERY' || isRecoveryRedirect(window.location.search))) {
-        setAuthMode('new-password')
-        setScreen('auth')
-        clearRecoveryRedirect()
+      // The callback URL alone proves nothing. Only a verified Supabase
+      // session permits entry into the personal dashboard.
+      if (nextUser && isGoogleRedirect(window.location.search)) {
+        setOauthError(false)
+        setScreen('account')
+        clearGoogleRedirect()
       }
+    }
+    const {data:{subscription}} = supabase.auth.onAuthStateChange((_event,session)=>{
+      syncUser(session?.user ?? null)
     })
     void supabase.auth.getUser().then(({data})=>{
       syncUser(data.user ?? null)
-      if (isRecoveryRedirect(window.location.search)) {
-        if (data.user) {
-          setAuthMode('new-password')
-        } else {
-          setAuthMode('forgot')
-        }
+      if (hasGoogleAuthError(window.location.search)) {
+        setOauthError(true)
         setScreen('auth')
-        clearRecoveryRedirect()
+        clearGoogleRedirect()
       }
     }).catch(()=>{
-      if (isRecoveryRedirect(window.location.search)) {
-        setAuthMode('forgot')
+      if (isGoogleRedirect(window.location.search)) {
+        setOauthError(true)
         setScreen('auth')
-        clearRecoveryRedirect()
+        clearGoogleRedirect()
       }
     })
     return ()=>{mounted=false;subscription.unsubscribe()}
@@ -119,7 +117,7 @@ function App() {
   const guestCandidate = user ? validatedAssessment(readStored('guest')) : null
   function openAccount() {
     if (user) setScreen('account')
-    else { setAuthMode('login'); setScreen('auth') }
+    else { setOauthError(false); setScreen('auth') }
     setShowMenu(false)
   }
   function viewSavedAssessment(snapshot: SavedAssessment) {
@@ -372,8 +370,8 @@ function App() {
           <p className="results-disclaimer"><ShieldCheck size={17}/> لو صعوبات التركيز أو النوم مؤثرة على حياتك بشكل واضح ومستمر، الأفضل تكلم مختص. الاختبار مش بديل عن تقييم طبي أو نفسي.</p>
         </div>}
         {screen==='results' && !allAnswered && <section className="container empty-result"><h1>لسه عندك شوية أسئلة</h1><p>كمّل الاختبار الأول عشان يطلعلك التقرير.</p><button className="btn btn-primary" onClick={startQuiz}>كمّل الأسئلة <ArrowLeft size={18}/></button></section>}
-        {screen==='auth' && <AuthPage initialMode={authMode} onDone={()=>setScreen('account')} onBack={()=>setScreen('home')}/>}
-        {screen==='account' && (user ? <AccountPage user={user} onBack={()=>setScreen('home')} onViewSaved={viewSavedAssessment} currentCandidate={currentCandidate} guestCandidate={guestCandidate}/> : <AuthPage onDone={()=>setScreen('account')} onBack={()=>setScreen('home')}/>)}
+        {screen==='auth' && <AuthPage oauthError={oauthError} onBack={()=>{clearGoogleRedirect();setOauthError(false);setScreen('home')}}/>}
+        {screen==='account' && (user ? <AccountPage user={user} onBack={()=>setScreen('home')} onViewSaved={viewSavedAssessment} currentCandidate={currentCandidate} guestCandidate={guestCandidate}/> : <AuthPage onBack={()=>setScreen('home')}/>)}
         {screen==='science' && <div className="container science-page">
           <span className="section-kicker">من الآخر، وبوضوح</span><h1>الموقع ده مبني على إيه؟</h1>
           <p className="science-lead">مصطلح «تعفن الدماغ» أو Brain Rot تعبير منتشر، مش اسم مرض أو تشخيص طبي. عشان كده هنا بنقيّم عادات وسلوكيات بيبلغ عنها الشخص بنفسه، مش بنقيس صحة دماغه.</p>
