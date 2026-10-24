@@ -116,7 +116,15 @@ const patternRules: PatternRule[] = [
   {id:'avoidance',title:'الموبايل أحيانًا بيبقى وسيلة هروب',description:'ممكن يكون الفراغ أو الضغط بيزود الرغبة في التصفح، حسب إجاباتك.',action:'قبل الموبايل خُد دقيقة واسأل نفسك: أنا زهقان ولا قلقان ولا محتاج راحة؟',questionIds:['i2','p3'],sourceId:'apa',min:[['i2',2],['p3',2]]},
   {id:'postpone',title:'بداية المهمة والإنجاز محتاجين حماية',description:'التصفح بيظهر مع تأجيل مهمة والرغبة في تغيير التطبيق بعد البداية.',action:'اعمل أول 10 دقائق من المهمة قبل فتح تطبيق ترفيهي، واكتب الخطوة الجاية.',questionIds:['i1','f3'],sourceId:'apa',min:[['i1',2],['f3',2]]},
   {id:'deep-time',title:'القفز بين المواضيع بيأثر على التعمق',description:'استعجال النتيجة والتنقل بين مواضيع كتير ظهروا مع بعض.',action:'اختار ناتج تعلم واحد صغير تخلصه خلال الأسبوع بدل فتح مواضيع جديدة.',questionIds:['p2','m3'],sourceId:'dunlosky',min:[['p2',2],['m3',2]]},
-  {id:'social-time',title:'وقت الناس ممكن يستفيد من حدود واضحة',description:'الشعور بفقدان السيطرة بيظهر مع الانشغال بالموبايل في اللقاءات.',action:'جرّب وجبة واحدة من غير موبايل، وراجع هل كانت أريح.',questionIds:['i3','i4'],sourceId:'apa',min:[['i3',2],['i4',2]]}
+  {id:'social-time',title:'وقت الناس ممكن يستفيد من حدود واضحة',description:'الشعور بفقدان السيطرة بيظهر مع الانشغال بالموبايل في اللقاءات.',action:'جرّب وجبة واحدة من غير موبايل، وراجع هل كانت أريح.',questionIds:['i3','i4'],sourceId:'apa',min:[['i3',2],['i4',2]]},
+  {id:'night-autopilot',title:'الرجوع للتطبيق بيظهر وقت النوم',description:'إعادة فتح التطبيق وصعوبة قفله في السرير ظهروا مع بعض؛ ده يوجّهنا لمراجعة روتين نهاية اليوم.',action:'جهّز مكان شحن بعيد عن السرير وحدد آخر استخدام مقصود قبل النوم.',questionIds:['s5','n2'],sourceId:'cdc',min:[['s5',2],['n2',2]]},
+  {id:'morning-loop',title:'بداية اليوم ممكن تحتاج اختيارًا أوضح',description:'فتح الترفيه عند الاستيقاظ بيظهر مع فقدان وقت أطول من المقصود.',action:'جهّز نشاط بداية صغير قبل التصفح، وبعده حدد غرض أول زيارة للتطبيق.',questionIds:['s4','s1'],sourceId:'apa',min:[['s4',2],['s1',2]]},
+  {id:'reading-switch',title:'القراءة بتتقطع بالتنقل',description:'الرغبة في فتح تطبيق تاني ظهرت مع إعادة قراءة السطور؛ تزامن مش إثبات للسبب.',action:'اقرأ جزءًا صغيرًا والموبايل بعيد، واكتب فكرة واحدة وعدد المقاطعات.',questionIds:['f3','f4'],sourceId:'dunlosky',min:[['f3',2],['f4',2]]},
+  {id:'shortcuts-learning',title:'المصدر الكامل والتطبيق محتاجين فرصة',description:'ترك المحتوى البطيء واختيار الملخصات ظهروا مع صعوبة تلخيص الأفكار.',action:'اختار فكرة واحدة من مصدر أصلي، اشرحها بكلامك ثم راجع دقة الشرح.',questionIds:['p4','m5','m2'],sourceId:'dunlosky',min:[['p4',2],['m5',2],['m2',2]]},
+  {id:'pressure-return',title:'الضغط والفتح التلقائي ظهروا مع بعض',description:'بتلجأ للمحتوى وقت الضغط، وبترجع للتطبيق بسرعة بعد ما تقفله.',action:'لاحظ إحساسك قبل الفتح، وجرب راحة قصيرة أو خطوة لحل المشكلة بدل الفتح التلقائي مرة واحدة.',questionIds:['i2','s5'],sourceId:'apa',min:[['i2',2],['s5',2]]},
+  {id:'goals-delay',title:'التأجيل له أثر على أهدافك',description:'تأجيل المسؤوليات والتأثير على الأهداف ظهروا معًا؛ نبدأ بمسؤولية ملموسة واحدة.',action:'اكتب أول خطوة في هدف اتأخر، وجدول بداية قصيرة لها قبل الترفيه.',questionIds:['i1','i5'],sourceId:'apa',min:[['i1',2],['i5',2]]},
+  {id:'rest-energy',title:'الراحة والطاقة يستحقوا الملاحظة',description:'الاستمرار رغم احتياج النوم ظهر مع قلة النشاط صباحًا. الاستبيان ما يقدرش يحدد سبب التعب.',action:'سجّل وقت النوم والاستيقاظ والطاقة عدة أيام؛ لو الإرهاق مستمر استعن بتقييم مناسب.',questionIds:['n5','n4'],sourceId:'cdc',min:[['n5',2],['n4',2]]},
+  {id:'unfinished-depth',title:'بدء مواضيع كتير مع صعوبة الاستمرار',description:'التنقل بين مواضيع التعلم ظهر مع صعوبة متابعة الشرح الطويل.',action:'اختار درسًا واحدًا وناتجًا صغيرًا منه، وبعده اختبر نفسك بسؤال قبل فتح موضوع جديد.',questionIds:['m3','f2'],sourceId:'dunlosky',min:[['m3',2],['f2',2]]}
 ]
 
 const commonActions = [
@@ -207,7 +215,7 @@ export function buildPersonalReport(answers: AnswerMap): PersonalReport {
     .map(rule=>({id:rule.id,title:rule.title,description:rule.description,action:rule.action,
        questionIds:rule.questionIds,sourceId:rule.sourceId,
        score:rule.questionIds.reduce((sum,id)=>sum+(answers[id]??0),0)
-    })).sort((a,b)=>b.score-a.score).slice(0,4)
+    })).sort((a,b)=>b.score-a.score)
   const priorities=[...questionReadings].filter(reading=>reading.answer>=2).sort((a,b)=>b.weight-a.weight).slice(0,5)
   const strengths=questionReadings.filter(reading=>reading.answer<=1).sort((a,b)=>a.answer-b.answer).slice(0,3)
   const actions:PersonalAction[]=[]
@@ -235,3 +243,4 @@ export function buildPersonalReport(answers: AnswerMap): PersonalReport {
   })
   return {domainReadings,questionReadings,patterns,priorities,strengths,actions,plan:planFromActions(actions),videos}
 }
+

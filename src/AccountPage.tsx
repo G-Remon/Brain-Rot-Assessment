@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { ArrowLeft, BookOpenCheck, CalendarDays, CheckCircle2, CloudUpload, History, LogOut, Mail, Pencil, RefreshCcw, ShieldCheck, Trash2, UserRound } from 'lucide-react'
-import { getBand, type AnswerMap } from './data'
+import { domains, domainScore, getBand, type AnswerMap } from './data'
 import { deleteSavedAssessment, listSavedAssessments, saveAssessment, snapshotKey, type SavedAssessment } from './assessment-history'
 import { supabase } from './supabase'
 import { loadDisplayName, saveDisplayName, validDisplayName } from './account-profile'
 
 type AccountPageProps = {
   user: User
+  onJourney: () => void
   onBack: () => void
   onViewSaved: (snapshot: SavedAssessment) => void
   currentCandidate: AnswerMap | null
@@ -21,7 +22,7 @@ function formatDate(timestamp:string) {
     : new Intl.DateTimeFormat('ar-EG',{day:'numeric',month:'long',year:'numeric'}).format(date)
 }
 
-export function AccountPage({user,onBack,onViewSaved,currentCandidate,guestCandidate}:AccountPageProps) {
+export function AccountPage({user,onBack,onViewSaved,onJourney,currentCandidate,guestCandidate}:AccountPageProps) {
   const [records,setRecords]=useState<SavedAssessment[]>([])
   const [loading,setLoading]=useState(true)
   const [pending,setPending]=useState('')
@@ -180,11 +181,17 @@ export function AccountPage({user,onBack,onViewSaved,currentCandidate,guestCandi
       {!editingName ? <><span>الاسم الظاهر في حسابك: <strong>{readableName}</strong></span><button type="button" className="account-profile-edit-btn" disabled={!!pending} onClick={()=>{setDraftName(displayName);setEditingName(true)}}><Pencil size={15}/> تعديل الاسم</button></> :
       <div className="account-profile-form"><label htmlFor="account-edit-name">اسم الحساب</label><input id="account-edit-name" autoComplete="name" maxLength={80} value={draftName} onChange={event=>setDraftName(event.target.value)} disabled={!!pending}/><button type="button" disabled={!!pending} onClick={()=>void saveName()}>حفظ</button><button type="button" disabled={!!pending} onClick={()=>setEditingName(false)}>إلغاء</button></div>}
     </div>
+    <div className="account-journey-banner"><div><span className="section-kicker">خطوتك الجاية</span><h2>كمّل خطتك، يوم بيوم</h2><p>ارجع لمسارك وملاحظاتك، أو جهّز خطة من آخر اختبار عملته.</p></div><button className="btn btn-primary" onClick={onJourney}><CalendarDays size={18}/> افتح خطتي</button></div>
     <div className="account-overview-grid">
       <div className="account-stat"><History size={20}/><span>نتائج محفوظة</span><strong>{loading?'—':records.length}</strong></div>
       <div className="account-stat"><BookOpenCheck size={20}/><span>آخر نتيجة محفوظة</span><strong>{stats?stats.latest+'/120':'—'}</strong></div>
-      <div className="account-stat"><CalendarDays size={20}/><span>التغير بين أول وآخر نتيجة</span><strong>{stats&&stats.count>1?(stats.difference>0?'+':'')+stats.difference:'—'}</strong><small>فرق وصفي في إجاباتك، مش مقياس طبي</small></div>
+      <div className="account-stat"><CalendarDays size={20}/><span>التغير بين أقدم وآخر نتيجة بالسجل</span><strong>{stats&&stats.count>1?(stats.difference>0?'+':'')+stats.difference:'—'}</strong><small>فرق وصفي في إجاباتك، مش مقياس طبي</small></div>
     </div>
+
+    {records.length>1&&<section className="account-comparison"><div className="account-section-head"><span className="section-kicker">التغيّر في كل محور</span><h2>المجموع مش الصورة كلها</h2><p>مقارنة أقدم وآخر نتيجة في السجل المعروض. الرقم الأقل يعني تكرارًا أقل في إجاباتك، ومش دليلًا وحده على تحسّن طبي.</p></div><div className="comparison-grid">{domains.map(domain=>{
+      const before=domainScore(records[records.length-1].answers,domain.id),after=domainScore(records[0].answers,domain.id),delta=after-before
+      return <article key={domain.id}><h3>{domain.short}</h3><div><span>{before}<small>قبل</small></span><ArrowLeft size={17}/><span>{after}<small>الأحدث</small></span></div><b className={delta<0?'decreased':delta>0?'increased':'unchanged'}>{delta<0?`أقل بـ${-delta}`:delta>0?`أعلى بـ${delta}`:'نفس الدرجة'}</b></article>
+    })}</div></section>}
 
     {(currentCandidate || guestCandidate) && <div className="account-save-section">
       <div className="account-section-head"><span className="section-kicker">اختياري بالكامل</span><h2>احفظ نتيجتك في حسابك</h2><p>هنحفظ إجابات الأسئلة الـ30 ودرجتك، عشان تقدر تراجع تقدمك فيما بعد. مش بنرفع أي إجابات من غير ما تضغط حفظ.</p></div>
@@ -227,3 +234,4 @@ export function AccountPage({user,onBack,onViewSaved,currentCandidate,guestCandi
     <div className="account-bottom-actions"><button type="button" className="account-logout" disabled={!!pending} onClick={()=>void logout()}><LogOut size={18}/>{pending==='logout'?'جاري الخروج...':'تسجيل الخروج'}</button></div>
   </section>
 }
+
