@@ -494,3 +494,24 @@
  .account-profile-form label{width:100%}
  .account-bulk-delete button{width:100%}
 }
+
+/* Passwordless Google sign-in */
+.auth-google-card{text-align:center;max-width:510px}
+.auth-google-card .auth-emblem{margin:0 auto 20px}
+.auth-google-card .auth-description{max-width:400px;margin:12px auto 27px;font-size:13px}
+.auth-google-card .auth-message{margin-bottom:16px;text-align:right}
+.auth-google-button{display:flex;align-items:center;justify-content:center;gap:15px;width:100%;min-height:60px;border:1.5px solid #d8e4e9;border-radius:14px;background:#fff;box-shadow:0 4px 14px rgba(31,61,80,.07);color:#1d3c4b;font-weight:900;font-size:14px;cursor:pointer;padding:12px 17px;transition:box-shadow .2s,border-color .2s,transform .2s}
+.auth-google-button:hover{border-color:#9ebcbf;box-shadow:0 7px 19px rgba(31,61,80,.12);transform:translateY(-1px)}
+.auth-google-button:focus-visible{outline:3px solid #60c6a1;outline-offset:3px}
+.auth-google-button:disabled{opacity:.65;cursor:wait;transform:none}
+.auth-google-button>span:nth-child(2){flex:1;text-align:center}
+.google-letter{width:35px;height:35px;border:1px solid #e4e9eb;border-radius:50%;background:white;display:grid;place-items:center;font-family:Arial,sans-serif;font-size:24px;line-height:1;font-weight:800;color:#4285f4;box-shadow:inset 0 0 0 2px #fff;flex-shrink:0}
+.auth-google-benefits{display:grid;gap:11px;text-align:right;background:#f6fbfa;border-radius:15px;margin:21px 0 14px;padding:18px;color:#466b75;font-size:12px;line-height:1.8}
+.auth-google-benefits>span{display:flex;gap:10px;align-items:center}
+.auth-google-benefits svg{color:#15937b;flex-shrink:0}
+.auth-google-card .auth-privacy{text-align:right;margin-top:16px}
+@media(max-width:640px){
+  .auth-google-card{padding:30px 18px}
+  .auth-google-button{min-height:56px;font-size:13px;gap:9px;padding:10px}
+  .auth-google-benefits{font-size:11px;padding:14px}
+}
