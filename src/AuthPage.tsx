@@ -1,5 +1,6 @@
+import './auth-help.css'
 import { useEffect, useState } from 'react'
-import { ArrowLeft, LockKeyhole, ShieldCheck, Sparkles, UserRound } from 'lucide-react'
+import { ArrowLeft, HelpCircle, LockKeyhole, ShieldCheck, Sparkles, UserRound } from 'lucide-react'
 import { beginGoogleSignIn } from './google-auth'
 
 // MindReset never receives a Google password or one-time code.
@@ -57,6 +58,19 @@ export function AuthPage({ onBack, required = false, oauthError = false }: AuthP
               <span>{busy ? 'جاري فتح Google...' : 'المتابعة باستخدام Google'}</span>
               <ArrowLeft size={18} aria-hidden="true"/>
             </button>}
+        <details className="auth-signin-help">
+          <summary><HelpCircle size={18}/><span>ناسي باسورد Google؟</span></summary>
+          <div>
+            <p>ممكن تقدر تدخل من غير كتابة الباسورد، حسب إعدادات حسابك والجهاز:</p>
+            <ol>
+              <li>اضغط «المتابعة باستخدام Google». لو حسابك مفتوح على الجهاز، اختاره وكمّل؛ ممكن ما يطلبش الباسورد.</li>
+              <li>لو Google طلب الباسورد، دور على «جرّب طريقة أخرى» أو «Try another way» واضغط عليها لو ظهرت.</li>
+              <li>لو ظهر خيار مفتاح المرور (Passkey)، اتبع رسالة الجهاز لاستخدام البصمة أو رمز قفل التليفون.</li>
+            </ol>
+            <p className="auth-signin-help-note">الخيارات دي بتحددها Google ومش بتظهر لكل حساب أو جهاز. اكتب رمز قفل التليفون في رسالة النظام فقط، مش في خانة باسورد Google أو داخل MindReset.</p>
+            <a href="https://support.google.com/accounts/answer/7682439?hl=ar" target="_blank" rel="noopener noreferrer">مفيش طريقة مناسبة؟ افتح إرشادات استرداد الحساب من Google</a>
+          </div>
+        </details>
         <div className="auth-google-benefits">
           <span><ShieldCheck size={17}/> Google بيتحقق من حسابك بنفسه</span>
           <span><LockKeyhole size={17}/> مش بنستقبل كلمة مرور Google</span>
