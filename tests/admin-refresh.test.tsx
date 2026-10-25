@@ -15,6 +15,6 @@ it('refreshes the accounts from the server without reloading or leaving the page
   await act(async()=>{[...host.querySelectorAll('button')].find(b=>b.textContent==='الحسابات')!.click()})
   expect(host.textContent).toContain('1 حساب');mock.rpc.mockResolvedValue({data:{...sample,total:2},error:null})
   await act(async()=>{[...host.querySelectorAll('button')].find(b=>b.textContent==='تحديث الحسابات')!.click();await new Promise(r=>setTimeout(r,0))})
-  expect(mock.rpc).toHaveBeenCalledTimes(2);expect(host.textContent).toContain('2 حساب');expect(host.querySelector('.admin-accounts')).not.toBeNull()
+  expect(mock.rpc.mock.calls.filter(([name])=>name==='get_admin_overview')).toHaveLength(2);expect(host.textContent).toContain('2 حساب');expect(host.querySelector('.admin-accounts')).not.toBeNull()
  }finally{await act(async()=>root.unmount());host.remove()}
 })

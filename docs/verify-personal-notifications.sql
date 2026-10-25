@@ -1,0 +1,43 @@
+-- Run as project database owner. Everything, including synthetic users and queued HTTP calls, rolls back.
+begin;
+do $$
+declare u uuid:=gen_random_uuid();v uuid:=gen_random_uuid();result jsonb;job uuid;device uuid;
+begin
+ insert into auth.users(id,email,raw_user_meta_data) values(u,'notification-test-'||u||'@example.invalid','{"full_name":"اختبار إشعارات"}');
+ perform set_config('request.jwt.claim.sub',u::text,true);
+ perform public.track_usage(gen_random_uuid(),v,'page_view','home');
+ perform public.track_usage(v,v,'test_started','quiz');perform public.track_usage(v,v,'test_started','quiz');
+ if(select count(*) from mindreset_access.usage_events where user_id=u)<>2 then raise exception 'event deduplication failed';end if;
+ begin perform public.get_site_analytics(7);raise exception 'member analytics leak';exception when insufficient_privilege then null;end;
+ result:=mindreset_access.member_service('subscribe',jsonb_build_object('owner',u,'endpoint','https://fcm.googleapis.com/fcm/send/test-'||u,'subscription',jsonb_build_object('endpoint','https://fcm.googleapis.com/fcm/send/test-'||u,'keys',jsonb_build_object('p256dh','B'||repeat('a',86),'auth',repeat('b',22)))));
+ if not (result->>'registered')::boolean then raise exception 'subscription missing';end if;
+ perform mindreset_access.notification_enqueue(u,'test-once','{"body":"synthetic","url":"/#/account"}');perform mindreset_access.notification_enqueue(u,'test-once','{"body":"synthetic","url":"/#/account"}');
+ if(select count(*) from mindreset_access.notification_jobs where user_id=u)<>1 then raise exception 'notification dedup failed';end if;
+ result:=mindreset_access.member_service('claim','{}');
+ if not exists(select 1 from jsonb_array_elements(result)x where x->>'owner'=u::text) then raise exception 'claim failed';end if;
+ select id into job from mindreset_access.notification_jobs where user_id=u;
+ result:=mindreset_access.member_service('targets',jsonb_build_object('event',job));
+ if jsonb_array_length(result)<>1 then raise exception 'own target missing';end if;
+ device:=(result->0->>'id')::uuid;
+ perform mindreset_access.member_service('delivered',jsonb_build_object('event',job,'subscription',device));
+ if jsonb_array_length(mindreset_access.member_service('targets',jsonb_build_object('event',job)))<>0 then raise exception 'duplicate target';end if;
+ perform mindreset_access.member_service('preferences',jsonb_build_object('owner',u,'hour',20,'timezone','Africa/Cairo','enabled',false,'sound',false));
+ if jsonb_array_length(mindreset_access.member_service('targets',jsonb_build_object('event',job)))<>0 then raise exception 'paused user targeted';end if;
+ begin perform mindreset_access.member_service('preferences',jsonb_build_object('owner',u,'hour',20,'timezone','Invalid/Zone','enabled',true));raise exception 'invalid timezone accepted';exception when others then if sqlerrm='invalid timezone accepted' then raise;end if;end;
+ perform mindreset_access.member_service('preferences',jsonb_build_object('owner',u,'hour',20,'timezone','Africa/Cairo','enabled',true,'sound',false));
+ perform mindreset_access.member_service('focus',jsonb_build_object('owner',u,'id',v,'seconds',120));
+ if not exists(select 1 from mindreset_access.notification_jobs where user_id=u and source='focus' and created_at>now()) then raise exception 'focus not scheduled';end if;
+ perform mindreset_access.member_service('focus',jsonb_build_object('owner',u,'id',v,'seconds',0));
+ if exists(select 1 from mindreset_access.notification_jobs where user_id=u and source='focus') then raise exception 'focus pause failed';end if;
+ perform public.record_assessment_completed(v);perform public.record_assessment_completed(v);
+ if(select count(*) from mindreset_access.assessment_completions where user_id=u)<>1 then raise exception 'completion duplicate';end if;
+ insert into public.pro_workspace(user_id,state) values(u,'{"version":1,"goals":[{"weekdays":[0,1,2,3,4,5,6],"tasks":[{"title":"synthetic task","doneOn":null}]}],"sessions":[],"distractions":[],"sleep":[],"cards":[{"due":"2000-01-01"}],"reviews":[],"challenges":[],"experiments":[],"program":{"days":"malformed","completed":[]}}');
+ result:=mindreset_access.next_steps(u,to_char(now(),'YYYY-MM-DD'));
+ if jsonb_array_length(result)<2 then raise exception 'real next steps missing';end if;
+ perform mindreset_access.member_service('preferences',jsonb_build_object('owner',u,'hour',extract(hour from now() at time zone 'Africa/Cairo')::integer,'timezone','Africa/Cairo','enabled',true,'sound',false));
+ perform mindreset_access.notification_tick();perform mindreset_access.notification_tick();
+ if(select count(*) from mindreset_access.notification_jobs where user_id=u and source like 'daily-%')<>1 then raise exception 'daily scheduler dedup failed';end if;
+ if has_function_privilege('authenticated','public.member_push_service(text,jsonb)','execute') or has_function_privilege('anon','public.get_site_analytics(integer)','execute') or has_table_privilege('authenticated','mindreset_access.member_devices','select') then raise exception 'client privilege leak';end if;
+end $$;
+select 'PASS: owner isolation, admin denial, idempotent events and push, leased delivery, disabled suppression, timezone validation, focus schedule/pause, completion dedup; rolled back' as verification;
+rollback;

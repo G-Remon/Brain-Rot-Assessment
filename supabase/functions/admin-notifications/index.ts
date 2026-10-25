@@ -14,16 +14,20 @@ Deno.serve(async req=>{
   if(!body||typeof body!=='object'||Array.isArray(body))return reply({error:'invalid-request'},400)
   const system=createClient(Deno.env.get('SUPABASE_URL')!,Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,{auth:{persistSession:false,autoRefreshToken:false}})
   async function service<T>(operation:string,payload:Record<string,unknown>={}):Promise<T>{const {data,error}=await system.rpc('admin_push_service',{operation,payload});if(error)throw Error('notification-store');return data as T}
+  const memberActions=['member-config','member-subscribe','member-unsubscribe','member-preferences','member-test','member-focus']
+  const member=memberActions.includes(body.action)
+  const dispatch=body.action==='dispatch'||body.action==='member-dispatch'
+  async function members<T>(operation:string,payload:Record<string,unknown>={}):Promise<T>{const {data,error}=await system.rpc('member_push_service',{operation,payload});if(error)throw Error('notification-store');return data as T}
   let owner=''
-  if(body.action!=='dispatch'){
+  if(!dispatch){
    const token=(req.headers.get('Authorization')??'').replace(/^Bearer /,'');if(!token)return reply({error:'login-required'},401)
    const client=createClient(Deno.env.get('SUPABASE_URL')!,Deno.env.get('SUPABASE_ANON_KEY')!,{global:{headers:{Authorization:'Bearer '+token}},auth:{persistSession:false,autoRefreshToken:false}})
    const {data:{user},error}=await client.auth.getUser(token);if(error||!user)return reply({error:'login-required'},401)
-   const {data:admin,error:denied}=await client.rpc('is_site_admin');if(denied||admin!==true)return reply({error:'admin-required'},403)
+   if(!member){const {data:admin,error:denied}=await client.rpc('is_site_admin');if(denied||admin!==true)return reply({error:'admin-required'},403)}
    owner=user.id
   }
   let config=await service<Config>('config')
-  if(body.action==='dispatch'){
+  if(dispatch){
    const provided=req.headers.get('x-mindreset-push-secret')??''
    const hash=async(s:string)=>new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s)))
    const a=await hash(provided),b=await hash(config.webhook_secret);let mismatch=provided.length===config.webhook_secret.length?0:1;for(let i=0;i<a.length;i++)mismatch|=a[i]^b[i]
@@ -31,6 +35,27 @@ Deno.serve(async req=>{
   }
   if(!config.vapid_public||!config.vapid_private){const keys=webpush.generateVAPIDKeys();config=await service<Config>('keys',keys)}
   const send=(subscription:Subscription,payload:unknown)=>webpush.sendNotification(subscription,JSON.stringify(payload),{vapidDetails:{subject:origin,publicKey:config.vapid_public!,privateKey:config.vapid_private!},TTL:3600,timeout:5000,urgency:'normal',contentEncoding:'aes128gcm'})
+  if(member){
+   const operation=body.action.slice(7)
+   if(operation==='subscribe'&&!validSubscription(body.subscription))return reply({error:'invalid-subscription'},400)
+   if(operation==='focus'&&(!Number.isInteger(body.seconds)||body.seconds<0||body.seconds>1800||typeof body.id!=='string'||!/^[a-zA-Z0-9-]{1,80}$/.test(body.id)))return reply({error:'invalid-timer'},400)
+   if(operation==='test'){
+    const target=await members<{id:string;subscription:Subscription;name:string}|null>('test_target',{owner,endpoint:body.endpoint})
+    if(!target||!validSubscription(target.subscription))return reply({error:'device-not-registered'},404)
+    try{await send(target.subscription,{title:'MindReset · خطوة ليك',body:'يا '+target.name+'، إشعاراتك جاهزة. هنفكّرك بخطواتك في الوقت اللي اخترته.',url:'/#/account',tag:'mindreset-personal-test',owner});return reply({accepted:true})}catch(error){if([404,410].includes((error as {statusCode:number}).statusCode))await members('expired',{subscription:target.id});return reply({error:'push-not-accepted'},502)}
+   }
+   return reply({...await members<Record<string,unknown>>(operation,{...body,owner}),publicKey:config.vapid_public})
+  }
+  if(body.action==='member-dispatch'){
+   const events=await members<Array<{id:string;payload:Record<string,unknown>;owner:string}>>('claim');let accepted=0
+   for(const event of events){
+    const targets=await members<Array<{id:string;subscription:Subscription;name?:string}>>('targets',{event:event.id})
+    const results=await Promise.all(targets.map(async target=>{
+     if(!validSubscription(target.subscription)){await members('expired',{subscription:target.id});return true}
+     try{await send(target.subscription,{...event.payload,title:'MindReset · خطوتك الجاية',tag:'mindreset-'+event.id,owner:event.owner});await members('delivered',{event:event.id,subscription:target.id});accepted++;return true}catch(error){if([404,410].includes((error as {statusCode:number}).statusCode)){await members('expired',{subscription:target.id});return true}return false}
+    }));await members(results.every(Boolean)?'complete':'retry',{event:event.id})
+   }return reply({processed:events.length,accepted})
+  }
   if(body.action==='config')return reply({publicKey:config.vapid_public,devices:await service('devices',{owner}),registered:typeof body.endpoint==='string'&&!!await service('test_target',{owner,endpoint:body.endpoint})})
   if(body.action==='subscribe'){
    if(!validSubscription(body.subscription))return reply({error:'invalid-subscription'},400)
@@ -38,16 +63,16 @@ Deno.serve(async req=>{
   }
   if(body.action==='unsubscribe')return reply(await service('unsubscribe',{owner,endpoint:typeof body.endpoint==='string'?body.endpoint:''}))
   if(body.action==='test'){
-   const target=await service<{id:string;subscription:Subscription}|null>('test_target',{owner,endpoint:body.endpoint});if(!target)return reply({error:'device-not-registered'},404)
-   try{await send(target.subscription,{title:'MindReset',body:'إشعارات الإدارة جاهزة على الجهاز ده.',tag:'mindreset-test',url:'/#/admin'});return reply({accepted:true})}catch(error){const code=(error as {statusCode?:number}).statusCode;if(code===404||code===410)await service('expired',{subscription:target.id});return reply({error:'push-not-accepted'},502)}
+   const target=await service<{id:string;subscription:Subscription;name?:string}|null>('test_target',{owner,endpoint:body.endpoint});if(!target)return reply({error:'device-not-registered'},404)
+   try{await send(target.subscription,{title:'MindReset',body:'يا '+(target.name??'صديقي')+'، إشعارات الإدارة جاهزة على الجهاز ده.',tag:'mindreset-test',url:'/#/admin'});return reply({accepted:true})}catch(error){const code=(error as {statusCode?:number}).statusCode;if(code===404||code===410)await service('expired',{subscription:target.id});return reply({error:'push-not-accepted'},502)}
   }
   if(body.action==='dispatch'){
    const events=await service<Array<{id:string;kind:string}>>('claim');let accepted=0
    for(const event of events){
-    const targets=await service<Array<{id:string;subscription:Subscription}>>('targets',{event:event.id})
+    const targets=await service<Array<{id:string;subscription:Subscription;name?:string}>>('targets',{event:event.id})
     const results=await Promise.all(targets.map(async target=>{
      if(!validSubscription(target.subscription)){await service('expired',{subscription:target.id});return true}
-     try{await send(target.subscription,eventPayload(event));await service('delivered',{event:event.id,subscription:target.id});accepted++;return true}catch(error){const code=(error as {statusCode?:number}).statusCode;if(code===404||code===410){await service('expired',{subscription:target.id});return true}return false}
+     try{await send(target.subscription,eventPayload({...event,name:target.name}));await service('delivered',{event:event.id,subscription:target.id});accepted++;return true}catch(error){const code=(error as {statusCode?:number}).statusCode;if(code===404||code===410){await service('expired',{subscription:target.id});return true}return false}
     }))
     await service(results.every(Boolean)?'complete':'retry',{event:event.id})
    }

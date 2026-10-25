@@ -1,3 +1,5 @@
+import { NotificationCenter } from './notification-center'
+import { trackUsage, useUsageAnalytics } from './usage-analytics'
 import { enqueueAssessmentEvent, useAssessmentEvents } from './assessment-events'
 import { AppMessages } from './app-messages'
 import { confirmAction } from './app-messages'
@@ -66,6 +68,7 @@ export function App() {
   const [feedback,setFeedback]=useState('')
   const [storageWarning,setStorageWarning]=useState('')
   useAssessmentEvents(user?.id)
+  useUsageAnalytics(user?.id,screen)
   useEffect(()=>{
     if (!supabase) {setAuthChecking(false);return}
     let mounted = true
@@ -120,7 +123,7 @@ export function App() {
   useEffect(()=>{
     if(authChecking||!user||screen==='auth')return
     const next=routeHash(screen)
-    if(window.location.hash!==next&&!(screen==='home'&&!window.location.hash))window.history.pushState({mindresetScreen:screen},'',window.location.pathname+window.location.search+next)
+    if(window.location.hash!==next&&!window.location.hash.startsWith(next+'?')&&!(screen==='home'&&!window.location.hash))window.history.pushState({mindresetScreen:screen},'',window.location.pathname+window.location.search+next)
     const heading=document.querySelector<HTMLElement>('#main-content h1')
     if(heading){heading.tabIndex=-1;heading.focus({preventScroll:true})}
   },[screen,authChecking,user?.id])
@@ -156,6 +159,7 @@ export function App() {
     setFeedback('دي نتيجة محفوظة من اختبار سابق. تقدر تشوف تحليل إجاباتك بالكامل.')
   }
   function startQuiz() {
+    void trackUsage(user?.id,'test_started','quiz')
     const missing=questions.findIndex(q=>answers[q.id]===undefined)
     setIndex(missing>=0?missing:0)
     setScreen('quiz')
@@ -177,7 +181,7 @@ export function App() {
       setIndex(missing)
       return
     }
-    if(user)enqueueAssessmentEvent(user.id)
+    if(user){enqueueAssessmentEvent(user.id);void trackUsage(user.id,'test_completed','results')}
     setScreen('results')
   }
   async function reset(){
@@ -199,7 +203,7 @@ export function App() {
     catch { setFeedback('النسخ مش متاح في المتصفح ده. جرب مشاركة النتيجة.') }
   }
   return (
-    <AccountGate user={user} loading={authChecking} oauthError={oauthError}><ProProvider key={user?.id} owner={user?.id} onUpgrade={()=>{setScreen('tools');setShowMenu(false)}}><div className="app-shell"><AppMessages/>
+    <AccountGate user={user} loading={authChecking} oauthError={oauthError}><ProProvider key={user?.id} owner={user?.id} onUpgrade={()=>{setScreen('tools');setShowMenu(false)}}><div className="app-shell"><AppMessages/>{user&&<NotificationCenter key={user.id} owner={user.id}/>}
       <a className="skip-link" href="#main-content" onClick={event=>{event.preventDefault();document.getElementById('main-content')?.focus()}}>انتقل للمحتوى</a>
       <header className="site-header">
         <div className="container nav">

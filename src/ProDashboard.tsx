@@ -10,10 +10,12 @@ import { Habits } from './pro/Habits'
 import { Learning } from './pro/Learning'
 import { Review } from './pro/Review'
 import { Program } from './pro/Program'
+function linkedPanel(){const panel=new URLSearchParams(window.location.hash.split('?')[1]??'').get('panel');return tabs.find(t=>t.id===panel)?.id??'goals'}
 const tabs=[{id:'goals',title:'هدفي',icon:Goal},{id:'focus',title:'تركيز',icon:Timer},{id:'program',title:'برنامجي',icon:CalendarDays},{id:'habits',title:'عاداتي',icon:Moon},{id:'learning',title:'تعلّم',icon:BookOpen},{id:'review',title:'أسبوعي',icon:ChartNoAxesCombined}] as const
 export function ProDashboard({owner}:{owner:string}){
- const [state,setState]=useState<ProState>(emptyProState),[loading,setLoading]=useState(true),[loadFailed,setLoadFailed]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState(''),[tab,setTab]=useState<typeof tabs[number]['id']>('goals'),[retry,setRetry]=useState(0)
+ const [state,setState]=useState<ProState>(emptyProState),[loading,setLoading]=useState(true),[loadFailed,setLoadFailed]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState(''),[tab,setTab]=useState<typeof tabs[number]['id']>(linkedPanel),[retry,setRetry]=useState(0)
  const [liteRequest,setLiteRequest]=useState(0)
+ useEffect(()=>{const changed=()=>setTab(linkedPanel());window.addEventListener('hashchange',changed);return()=>window.removeEventListener('hashchange',changed)},[])
  const lastSession=state.sessions.map(s=>s.date).filter(d=>d<=localDate()).sort().at(-1)
  const returnGap=lastSession?Math.floor((Date.parse(localDate())-Date.parse(lastSession))/86400000):null
  const revision=useRef<string|null>(null)

@@ -36,7 +36,7 @@ export function AdminNotifications({owner}:{owner:string}){
  }
  async function disable(){
   if(!registration||busy)return;setBusy(true);setError('');setNotice('')
-  try{const subscription=await registration.pushManager.getSubscription();if(subscription){await adminPushRequest(owner,'unsubscribe',{endpoint:subscription.endpoint});await subscription.unsubscribe()}if(alive.current){setActive(false);setNotice('إشعارات الجهاز ده اتوقفت.');setAttempt(n=>n+1)}}catch{if(alive.current)setError('تعذّر إيقاف الإشعارات. حاول تاني.')}finally{if(alive.current)setBusy(false)}
+  try{const subscription=await registration.pushManager.getSubscription();if(subscription){await adminPushRequest(owner,'unsubscribe',{endpoint:subscription.endpoint})}if(alive.current){setActive(false);setNotice('إشعارات الجهاز ده اتوقفت.');setAttempt(n=>n+1)}}catch{if(alive.current)setError('تعذّر إيقاف الإشعارات. حاول تاني.')}finally{if(alive.current)setBusy(false)}
  }
  async function test(){
   if(!registration||busy)return;setBusy(true);setError('');setNotice('')

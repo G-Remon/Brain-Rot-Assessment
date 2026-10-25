@@ -1,3 +1,4 @@
+import { detachPersonalDevice } from './notification-center'
 import { confirmAction } from './app-messages'
 import { useEffect, useMemo, useState } from 'react'
 import type { User } from '@supabase/supabase-js'
@@ -164,6 +165,7 @@ export function AccountPage({user,onBack,onViewSaved,onJourney,currentCandidate,
     if(!supabase||pending)return
     setPending('logout');setError('');setNotice('')
     try{
+      await detachPersonalDevice(user.id)
       const {error:signOutError}=await supabase.auth.signOut()
       if(signOutError)throw signOutError
       onBack()

@@ -103,3 +103,15 @@ Audit regression tests in `tests/interaction-audit.test.tsx` exercise the actual
 The client reports completion only after the final question, independently of optional saved answers. Failed event reporting retains the same UUID for a later retry; no answers or scores are included. The admin activity feed shows up to 50 recent events. Account refresh reloads database results without browser navigation.
 
 Email reminders are **not enabled**. No sending provider has been provisioned or verified. The owner requires zero paid services and no purchased domain. A possible free option is Brevo's Free transactional plan, subject to provider approval and free-tier limits; connect a real free account and verified sender before implementing or enabling reminder delivery. Never claim email delivery or send reminder messages without that setup. No payment or subscription has been purchased.
+
+### Personal notifications and analytics
+
+All members can opt in through the in-app notification invitation or **خطوتك الجاية**. Native permission is requested only after a click. The existing VAPID keys and push-only service worker are shared; disabling admin alerts removes only the admin mapping and preserves personal subscriptions. Personal subscriptions are removed before explicit sign-out. Preferences include reminder hour, IANA timezone, sound in the open app, and pause; admins additionally control hourly/daily digests. OS notification sounds are controlled by the device.
+
+`docs/member-notifications-schema.sql` documents the installed private schema, role-checked RPCs, minute cron, idempotent outbox/receipts, server focus timer, daily grouped reminders and aggregate usage data. The scheduler sends one daily reminder when real pending steps exist; weekly review is included in that group. Focus completion and published updates are separate events. Admin hourly digests run 09:00–22:00 in the selected timezone only when the previous hour had activity; the 22:00 daily digest covers 24 hours. Enable personal notifications on the admin device to receive these digests; existing immediate admin signup/completion alerts remain available independently.
+
+Run `docs/verify-personal-notifications.sql` as database owner for rollback-only integration checks. `docs/admin-notification-personalization.sql` preserves the existing admin role checks and adds the recipient's display name. Never rotate existing VAPID keys or copy private configuration into the client.
+
+Analytics begins at instrumentation deployment and counts signed-in page views, browser-tab sessions after 30 minutes of no navigation, and unique signed-in users. It does not estimate historical/anonymous visitors. The test funnel matches starts and completions within a session; saved plans/tasks are explicitly labeled current totals. Usage events expire after 90 days, personal jobs after 30. Push acceptance is not proof of display/read. New update messages are sent only by an admin's explicit publish action with a stable idempotency key.
+
+No email provider, paid integration, or billing resource was added. Existing free infrastructure quotas still apply.
