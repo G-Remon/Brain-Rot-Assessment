@@ -1,8 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ArrowLeft, BookOpen, CalendarDays, Check, CheckCircle2, ChevronLeft, Cloud, RefreshCcw, Target } from 'lucide-react'
 import { validatedAssessment, snapshotKey } from './assessment-history'
 import { type AnswerMap } from './data'
-import { buildJourney, contextLabels, defaultConfig, journeySources, localDate, nextPlanDay, planDayDate, recommendTrack, tracks, type PlanConfig, type PlanRecord } from './journey'
+import { contextLabels, defaultConfig, journeySources, localDate, nextPlanDay, planDayDate, recommendTrack, tracks, type PlanConfig, type PlanRecord } from './journey'
+import { proRequest } from './pro-access'
+import type { buildJourney } from './journey'
 import { loadPlan, persistPlan, removePlan } from './plan-store'
 
 export function JourneyWorkspace({owner,answers,onStartQuiz,onLogin}:{owner:string;answers:AnswerMap|null;onStartQuiz:()=>void;onLogin:()=>void}) {
@@ -32,8 +34,19 @@ export function JourneyWorkspace({owner,answers,onStartQuiz,onLogin}:{owner:stri
   },[owner,reload])
   const candidate=validatedAssessment(answers)
   const previewAnswers=candidate??plan?.answers??null
-  const preview=useMemo(()=>previewAnswers?buildJourney(previewAnswers,draft):null,[previewAnswers,draft])
-  const active=useMemo(()=>plan?buildJourney(plan.answers,plan.config):null,[plan])
+  type Journey=ReturnType<typeof buildJourney>
+  const [preview,setPreview]=useState<Journey|null>(null),[active,setActive]=useState<Journey|null>(null),[remoteLoading,setRemoteLoading]=useState(false)
+  const previewKey=snapshotKey(previewAnswers),activeKey=plan?.assessment_key
+  const activeConfig=JSON.stringify(plan?.config)
+  useEffect(()=>{
+    let current=true
+    if(!previewAnswers){setPreview(null);setActive(null);return}
+    setRemoteLoading(true)
+    const previewRequest=proRequest<{journey:Journey}>('journey',{answers:previewAnswers,config:draft})
+    const activeRequest=plan?(plan.assessment_key===previewKey&&JSON.stringify(plan.config)===JSON.stringify(draft)?previewRequest:proRequest<{journey:Journey}>('journey',{answers:plan.answers,config:plan.config})):Promise.resolve(null)
+    void Promise.all([previewRequest,activeRequest]).then(([nextPreview,nextActive])=>{if(current){setPreview(nextPreview.journey);setActive(nextActive?.journey??null)}}).catch(()=>{if(current){setPreview(null);setActive(null);setError('تعذّر تحميل خطوات الخطة. راجع الاتصال وصلاحية الاشتراك.')}}).finally(()=>{if(current)setRemoteLoading(false)})
+    return()=>{current=false}
+  },[previewKey,activeKey,activeConfig,draft.track,draft.minutes,draft.context,reload])
   const shown=active??preview
   const day=shown?.days[selectedDay-1]
   const complete=plan?.completed_days.length??0
@@ -49,7 +62,7 @@ export function JourneyWorkspace({owner,answers,onStartQuiz,onLogin}:{owner:stri
     finally{requestBusy.current=false;if(alive.current)setPending(false)}
   }
   async function start() {
-    if(!previewAnswers||pending||loadFailed)return
+    if(!previewAnswers||!preview||remoteLoading||pending||loadFailed)return
     if(plan&&!window.confirm('بدء مسار جديد هيستبدل خطة الـ14 يوم وملاحظاتها الحالية. نتائج اختباراتك هتفضل محفوظة. تكمل؟'))return
     const next:PlanRecord={version:1,answers:previewAnswers,assessment_key:snapshotKey(previewAnswers)!,config:{...draft},started_on:localDate(),completed_days:[],notes:{}}
     const saved=await save(next,owner==='guest'?'بدأت خطتك واتحفظت على الجهاز ده.':'بدأت خطتك واتحفظت في حسابك.')
@@ -84,9 +97,10 @@ export function JourneyWorkspace({owner,answers,onStartQuiz,onLogin}:{owner:stri
           <div className="plan-config-grid"><label>المسار<select value={draft.track} onChange={e=>setDraft(p=>({...p,track:e.target.value as PlanConfig['track']}))}><option value="auto">اختيار حسب نتيجتي</option>{tracks.map(t=><option key={t.id} value={t.id}>{t.title}</option>)}</select></label><label>الوقت اليومي<select value={draft.minutes} onChange={e=>setDraft(p=>({...p,minutes:Number(e.target.value) as PlanConfig['minutes']}))}>{[10,20,30].map(n=><option key={n} value={n}>{n} دقايق يوميًا</option>)}</select></label><label>هطبّق فين؟<select value={draft.context} onChange={e=>setDraft(p=>({...p,context:e.target.value as PlanConfig['context']}))}>{Object.entries(contextLabels).map(([id,label])=><option key={id} value={id}>{label}</option>)}</select></label></div>
           {preview&&<div className="plan-recommendation"><strong>{tracks.find(t=>t.id===preview.track)!.title}</strong><p>{preview.reason}</p><small>{draft.track==='auto'?`المسار التلقائي: ${tracks.find(t=>t.id===recommendTrack(previewAnswers))!.description}`:'اختيارك اليدوي يحدد مجال التطبيق؛ النتيجة الأصلية مش بتتغير.'}</small></div>}
           {differentAssessment&&<p className="plan-snapshot-note">إجاباتك الحالية مختلفة عن إجابات الخطة المحفوظة. الخطة مستمرة على نتيجتها الأصلية؛ بدء مسار جديد يستخدم الإجابات الحالية.</p>}
-          <button className="btn btn-primary" disabled={pending} onClick={()=>void start()}>{pending?'جاري الحفظ...':plan?'ابدأ مسار جديد بالاختيارات دي':'ابدأ خطة الـ14 يوم'}<ArrowLeft size={17}/></button><p className="plan-consent">{owner==='guest'?'الخطة والملاحظات هيتحفظوا على الجهاز ده.':'بالضغط هنحفظ إجابات الخطة وملاحظاتك في حسابك، عشان ترجع لها من أي جهاز.'}</p>
+          <button className="btn btn-primary" disabled={pending||remoteLoading||!preview} onClick={()=>void start()}>{pending?'جاري الحفظ...':plan?'ابدأ مسار جديد بالاختيارات دي':'ابدأ خطة الـ14 يوم'}<ArrowLeft size={17}/></button><p className="plan-consent">{owner==='guest'?'الخطة والملاحظات هيتحفظوا على الجهاز ده.':'بالضغط هنحفظ إجابات الخطة وملاحظاتك في حسابك، عشان ترجع لها من أي جهاز.'}</p>
         </div></details>
-        {shown&&day&&<div className="journey-board">
+        {remoteLoading&&<div className="workspace-status" role="status">بنجهّز خطواتك...</div>}
+        {!remoteLoading&&shown&&day&&<div className="journey-board">
           <div className="journey-board-head"><div><span className="journey-eyebrow"><CalendarDays size={16}/>{plan?'مسارك الحالي':'معاينة قبل البداية'}</span><h3>{tracks.find(t=>t.id===shown.track)!.title}</h3><p>{plan?`بدأت ${new Intl.DateTimeFormat('ar-EG',{day:'numeric',month:'long'}).format(new Date(plan.started_on+'T12:00:00'))} · ${plan.config.minutes} دقايق يوميًا`:'تقدر تشوف تفاصيل الأيام قبل ما تحفظ الخطة.'}</p></div><div className="journey-progress-number"><strong>{complete}<small>/14</small></strong><span>أيام مكتملة</span></div></div>
           <div className="journey-progress" role="progressbar" aria-label="إنجاز الخطة" aria-valuemin={0} aria-valuemax={14} aria-valuenow={complete}><span style={{width:`${complete/14*100}%`}}/></div>
           <div className="journey-layout"><div className="journey-calendar"><div className="week-switch">{[1,2].map(n=><button key={n} aria-pressed={week===n} disabled={pending} onClick={()=>setWeek(n)}>الأسبوع {n===1?'الأول':'التاني'}</button>)}</div><div className="journey-day-list">{shown.days.filter(d=>Math.ceil(d.day/7)===week).map(d=><button key={d.day} className={d.day===selectedDay?'active':''} aria-current={d.day===selectedDay?'step':undefined} onClick={()=>chooseDay(d.day)} disabled={pending}><span className={plan?.completed_days.includes(d.day)?'day-number done':'day-number'}>{plan?.completed_days.includes(d.day)?<Check size={17}/>:String(d.day).padStart(2,'0')}</span><span><small>{d.phase}</small><strong>{d.title}</strong></span><ChevronLeft size={15}/></button>)}</div></div>

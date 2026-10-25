@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { ArrowLeft, CheckCircle2, ChevronLeft, Lightbulb, Target } from 'lucide-react'
 import { domains, questions, sources, type AnswerMap, type DomainId } from './data'
-import { buildPersonalReport } from './personalization'
+import type { PersonalReport } from './personalization'
 import { rankDomains, recommendTrack, tracks } from './journey'
 
 const domainGuides:Record<DomainId,{meaning:string;watch:string;metric:string}>={
@@ -12,8 +12,7 @@ const domainGuides:Record<DomainId,{meaning:string;watch:string;metric:string}>=
   sleep:{meaning:'المحور بيراجع تداخل التصفح مع روتين النوم والطاقة؛ التعب له أسباب متعددة والاستبيان ما يحددهاش.',watch:'راقب المواعيد والظروف عدة أيام. لو المشكلة مستمرة ومؤثرة، التقييم المتخصص أنسب من افتراض سبب واحد.',metric:'وقت النوم والاستيقاظ ونهاية التصفح والطاقة صباحًا.'},
   impact:{meaning:'المحور بيركز على أثر الاستخدام على مسؤولياتك وعلاقاتك وأهدافك، وده مهم حتى لو المجموع قليل.',watch:'اختار موقفًا واحدًا له أثر حقيقي، وابدأ بتغيير بسيط. لو الأثر واضح ومستمر اطلب مساعدة مناسبة.',metric:'مسؤولية بدأت في ميعادها أو لقاء قلّت فيه المقاطعات.'},
 }
-export function AnalysisExplorer({answers}:{answers:AnswerMap}) {
-  const report=useMemo(()=>buildPersonalReport(answers),[answers])
+export function AnalysisExplorer({answers,report}:{answers:AnswerMap;report:PersonalReport}) {
   const ranked=useMemo(()=>rankDomains(answers),[answers])
   const [selected,setSelected]=useState<DomainId>(ranked[0].id)
   const domain=report.domainReadings.find(d=>d.id===selected)!

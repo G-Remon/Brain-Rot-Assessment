@@ -59,12 +59,13 @@ export async function saveAssessment(owner: string, value: unknown): Promise<Sav
   const answers=validatedAssessment(value)
   if (!answers) throw new Error('assessment-incomplete')
   await verifiedOwner(owner)
-  const { data, error } = await supabase!.from('assessments')
+  const { error } = await supabase!.from('assessments')
     .insert({user_id:owner, answers, total_score:totalScore(answers)})
-    .select('id,user_id,answers,total_score,created_at')
-    .single()
-  if (error) throw error
-  if (!isSafeSavedRow(data,owner)) throw new Error('invalid-server-response')
+  if(error)throw error
+  // A separate read lets the newest-only Free RLS policy see the committed row.
+  const {data,error:readError}=await supabase!.from('assessments').select('id,user_id,answers,total_score,created_at').eq('user_id',owner).order('created_at',{ascending:false}).order('id',{ascending:false}).limit(1).single()
+  if(readError)throw readError
+  if(!isSafeSavedRow(data,owner))throw new Error('invalid-server-response')
   return data
 }
 
@@ -79,3 +80,4 @@ export async function deleteSavedAssessment(owner: string, id: string): Promise<
     .eq('user_id',owner)
   if (error) throw error
 }
+
