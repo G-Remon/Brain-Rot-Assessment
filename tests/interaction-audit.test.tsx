@@ -46,13 +46,26 @@ describe('actual application navigation and failure states',()=>{
   await render(<App/>);await click(button('الاختبار',host.querySelector('nav')!))
   for(let i=0;i<30;i++){await click(host.querySelectorAll<HTMLButtonElement>('.answer-option')[2]);await click(button(i===29?'شوف نتيجتك':'التالي'))}
   expect(host.querySelector('.results-page')).not.toBeNull()
+  await click(button('التحليل المفصّل',host.querySelector('.report-navigation')!));expect(host.querySelector('#analysis')?.closest('details')?.open).toBe(true)
   const link=host.querySelector<HTMLAnchorElement>('.report-lead a')!;expect(link.getAttribute('href')).toBe('#/journey')
   await click(link);expect(host.querySelector('.journey-workspace')).not.toBeNull()
+ })
+ it('opens the guide from navigation and returns from the score explanation to the real plan',async()=>{
+  localStorage.setItem('mindreset-assessment-v1:user:audit-owner',JSON.stringify(full));await render(<App/>);
+  await click(button('إرشادات',host.querySelector('nav')!));expect(window.location.hash).toBe('#/guide');expect(host.querySelector('.user-guide')).not.toBeNull();
+  await click(button('افهم نتيجتي'));expect(host.querySelector('.result-orientation')?.textContent).toContain('الدرجة الأقل = صعوبات أقل');
+  await click(button('ابدأ بخطة الـ14 يوم'));expect(window.location.hash).toBe('#/journey');expect(host.querySelector('.journey-workspace')).not.toBeNull();expect(host.querySelector('.section-help')).not.toBeNull();
+ })
+ it('includes optional result details when printing and restores the reading view afterward',async()=>{
+  localStorage.setItem('mindreset-assessment-v1:user:audit-owner',JSON.stringify(full));window.history.replaceState(null,'','/#/results');await render(<App/>);
+  const details=[...host.querySelectorAll<HTMLDetailsElement>('details.guided-details')];expect(details.length).toBe(3);expect(details.every(d=>!d.open)).toBe(true);
+  await click(button('التحليل المفصّل',host.querySelector('.report-navigation')!));const openBefore=details.map(d=>d.open);
+  window.dispatchEvent(new Event('beforeprint'));expect(details.every(d=>d.open)).toBe(true);window.dispatchEvent(new Event('afterprint'));expect(details.map(d=>d.open)).toEqual(openBefore);
  })
  it('does not replace the page route with an orphan section hash',async()=>{
   localStorage.setItem('mindreset-assessment-v1:user:audit-owner',JSON.stringify(full));window.history.replaceState(null,'','/#/results')
   await render(<App/>);const nav=host.querySelector('.report-navigation')!;const target=[...nav.querySelectorAll<HTMLElement>('a,button')].find(e=>e.textContent==='الكتب والمصادر')!;await click(target)
-  expect(window.location.hash).toBe('#/results')
+  expect(window.location.hash).toBe('#/results');expect(host.querySelector<HTMLDetailsElement>('#resources')?.open).toBe(true)
  })
  it('keeps the app usable if browser storage is full or disabled',async()=>{
   vi.spyOn(Storage.prototype,'setItem').mockImplementation(()=>{throw new DOMException('Quota exceeded','QuotaExceededError')})

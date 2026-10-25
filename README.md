@@ -115,3 +115,11 @@ Run `docs/verify-personal-notifications.sql` as database owner for rollback-only
 Analytics begins at instrumentation deployment and counts signed-in page views, browser-tab sessions after 30 minutes of no navigation, and unique signed-in users. It does not estimate historical/anonymous visitors. The test funnel matches starts and completions within a session; saved plans/tasks are explicitly labeled current totals. Usage events expire after 90 days, personal jobs after 30. Push acceptance is not proof of display/read. New update messages are sent only by an admin's explicit publish action with a stable idempotency key.
 
 No email provider, paid integration, or billing resource was added. Existing free infrastructure quotas still apply.
+
+### Guided first use
+
+`#/guide` explains the score direction (lower means fewer reported difficulties), 0–20 domain scores versus the 0–120 total, and when/how to use each page. It is available from main navigation, the home-page secondary action, the result summary, page wayfinding, and the footer. Authentication remains required.
+
+Results begin with a plain-language explanation, low-difficulty areas when supported by the answers, and one suggested starting action. Each domain now includes a textual interpretation. Optional analysis, extra suggestions and resources use expandable sections; report navigation opens the correct section, and printing temporarily expands the content before restoring the reader's view. Existing answers, saved results and progress are preserved.
+
+Plan, library, account and all six tool panels contain contextual instructions with purpose, steps and an expected outcome. Descriptive score labels reuse the existing visual ranges; they are not diagnostic thresholds or measures of ability. The guide page is included in the existing authenticated aggregate page-view instrumentation.

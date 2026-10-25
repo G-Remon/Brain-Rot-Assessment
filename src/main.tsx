@@ -1,3 +1,5 @@
+import { UserGuide, ResultOrientation } from './UserGuide'
+import { describeDomainScore, domainGuidance } from './user-guidance'
 import { NotificationCenter } from './notification-center'
 import { trackUsage, useUsageAnalytics } from './usage-analytics'
 import { enqueueAssessmentEvent, useAssessmentEvents } from './assessment-events'
@@ -137,7 +139,6 @@ export function App() {
   const suggestedSteps=useMemo(()=>prioritizedRecommendations(answers).slice(0,3),[answers])
   const videos=arabicVideos
   const booksForYou=useMemo(()=>recommendBooks(answers),[answers])
-  const mainAreas=ranked.filter(d=>d.score>=5).slice(0,3)
   const allAnswered=answered===questions.length
   const currentCandidate = allAnswered ? validatedAssessment(answers) : null
   const guestCandidate = user ? validatedAssessment(readStored('guest')) : null
@@ -198,6 +199,14 @@ export function App() {
       setFeedback('لو المشاركة مش مدعومة، استخدم زر نسخ النتيجة.')
     }
   }
+  function openReportSection(id:string){const target=document.getElementById(id);const details=target?.closest('details');if(details)details.open=true;target?.scrollIntoView({behavior:'smooth'})}
+  useEffect(()=>{
+    const previous=new Map<HTMLDetailsElement,boolean>()
+    const before=()=>{document.querySelectorAll<HTMLDetailsElement>('details.guided-details').forEach(item=>{if(!previous.has(item))previous.set(item,item.open);item.open=true})}
+    const after=()=>{previous.forEach((open,item)=>{item.open=open});previous.clear()}
+    window.addEventListener('beforeprint',before);window.addEventListener('afterprint',after)
+    return()=>{window.removeEventListener('beforeprint',before);window.removeEventListener('afterprint',after);after()}
+  },[])
   async function copy(){
     try { await navigator.clipboard.writeText(shareText);setFeedback('اتنسخت النتيجة بنجاح') }
     catch { setFeedback('النسخ مش متاح في المتصفح ده. جرب مشاركة النتيجة.') }
@@ -217,6 +226,7 @@ export function App() {
             <button onClick={()=>{setScreen('library');setShowMenu(false)}} aria-current={screen==='library'?'page':undefined} className={screen==='library'?'active':''}>الحلول</button>
             <button onClick={()=>{setScreen('journey');setShowMenu(false)}} aria-current={screen==='journey'?'page':undefined} className={screen==='journey'?'active':''}>خطتي</button>
             <button className={screen==='tools'?'active pro-nav':'pro-nav'} onClick={()=>{setScreen('tools');setShowMenu(false)}} aria-current={screen==='tools'?'page':undefined}>أدواتي</button>
+            <button onClick={()=>{setScreen('guide');setShowMenu(false)}} aria-current={screen==='guide'?'page':undefined} className={screen==='guide'?'active':''}>إرشادات</button>
             <AdminNavButton active={screen==='admin'} onClick={()=>{setScreen('admin');setShowMenu(false)}}/>
           </nav>
           <div className="nav-actions">
@@ -229,6 +239,8 @@ export function App() {
       </header>
       <main id="main-content" className={'main-content page-'+screen} tabIndex={-1}>
         {storageWarning&&<div className="container workspace-error" role="status">{storageWarning}</div>}
+        {!['home','auth','quiz','guide'].includes(screen)&&<div className="container context-wayfinding"><span>أنت الآن: {({results:'نتيجتي',journey:'خطتي',library:'مكتبة الحلول',tools:'أدواتي',account:'حسابي',science:'العلم والمصادر',admin:'الإدارة'} as Record<string,string>)[screen]??'MindReset'}</span><button onClick={()=>setScreen('guide')}>محتاج شرح؟ إرشادات الاستخدام</button></div>}
+        {screen==='guide'&&<UserGuide hasResult={allAnswered} onQuiz={startQuiz} onResult={()=>setScreen('results')} onPlan={()=>setScreen('journey')}/>}
         {screen==='home' && <>
           <section className="hero container">
             <div className="hero-copy">
@@ -237,7 +249,7 @@ export function App() {
               <p className="hero-lead">بتتشتت بسرعة؟ بتفتح الريلز من غير ما تحس؟ ولا بس عايز تطمّن على عاداتك؟ جاوب على شوية أسئلة بسيطة، وهنساعدك تفهم الصورة.</p>
               <div className="hero-actions">
                 <button className="btn btn-primary" onClick={startQuiz}>{answered>0 && !allAnswered?'كمّل من مكانك':'يلا نبدأ الاختبار'} <ArrowLeft size={20}/></button>
-                <button className="btn btn-soft" onClick={()=>setScreen('science')}>الاختبار ده إيه؟ <ChevronLeft size={19}/></button>
+                <button className="btn btn-soft" onClick={()=>setScreen('guide')}>أبدأ منين؟ <ChevronLeft size={19}/></button>
               </div>
               <div className="hero-proof"><span><Clock3 size={16}/> حوالي 5 دقايق</span><span><LockKeyhole size={16}/> حسابك خاص بيك</span><span><CheckCircle2 size={16}/> نتيجتك فورًا</span></div>
               <p className="hero-disclaimer">ده تقييم ذاتي استرشادي، مش تشخيص طبي ولا مقياس لتلف الدماغ.</p>
@@ -275,18 +287,18 @@ export function App() {
           <p className="quiz-bottom-note">خد وقتك. كل إجابة بتساعدنا نديك تحليل أقرب لعاداتك.</p>
         </section>}
         {screen==='results' && allAnswered && <div className="container results-page">
-          <div className="results-intro"><span className="section-kicker">خلصت! عاش إنك كملت 👏</span><h1>دي صورتك الحالية...<br/><span className="highlight">مش حكم عليك.</span></h1><p>النتيجة بتلخّص إجاباتك عن آخر 14 يوم، مش بتحدد ذكاءك أو «نسبة ضرر دماغك».</p></div>
-          <div className="result-shortcuts"><button onClick={()=>setScreen('library')}>شوف الحلول اللي تناسبك <ArrowLeft size={16}/></button><button onClick={()=>setScreen('journey')}>خطة الـ14 يوم <ChevronLeft size={16}/></button><button className="result-save-shortcut" onClick={openAccount}><LockKeyhole size={16}/>{user?'احفظ نتيجتك في حسابك':'احفظ نتيجتك بحساب Google مجاني'}</button></div>
-          <nav className="report-navigation" aria-label="أقسام التقرير"><button onClick={()=>document.getElementById('analysis')?.scrollIntoView({behavior:'smooth'})}>التحليل المفصّل</button><button onClick={()=>setScreen('library')}>مكتبة الحلول</button><button onClick={()=>setScreen('journey')}>خطتي العملية</button><button onClick={()=>document.getElementById('resources')?.scrollIntoView({behavior:'smooth'})}>الكتب والمصادر</button></nav>
+          <div className="results-intro"><span className="section-kicker">خلصت! عاش إنك كملت 👏</span><h1>نتيجتك، بلغة واضحة.<br/><span className="highlight">وخطوة واحدة تبدأ بيها.</span></h1><p>النتيجة بتلخّص إجاباتك عن آخر 14 يوم، مش بتحدد ذكاءك أو «نسبة ضرر دماغك».</p></div>
+          <ResultOrientation answers={answers} onPlan={()=>setScreen('journey')} onGuide={()=>setScreen('guide')}/>
+          <div className="result-shortcuts"><button className="result-save-shortcut" onClick={openAccount}><LockKeyhole size={16}/>احفظ نسخة من نتيجتك · اختياري</button></div>
+          <nav className="report-navigation" aria-label="أقسام التقرير"><button onClick={()=>openReportSection('report-analysis')}>التحليل المفصّل</button><button onClick={()=>openReportSection('resources')}>الكتب والمصادر</button><button onClick={()=>setScreen('guide')}>شرح الدرجات والأدوات</button></nav>
           <div className="results-grid">
-            <article className="score-card"><span className="card-eyebrow">مجموع الإجابات</span><div className="score-ring" style={{'--amount':`${score/120*100}%`} as CSSProperties}><div><strong>{score}</strong><span>من 120</span></div></div><div className="band-pill">{band.title}</div><p>{band.note}</p><small>تصنيفات وصفية من تصميم الموقع، مش حدود تشخيصية معتمدة.</small></article>
-            <article className="breakdown-card"><div className="card-heading"><h2>تفصيل المحاور</h2><span>من 20 لكل محور</span></div>{ranked.map(d=><div className="score-line" key={d.id}><div className="score-name"><span><IconFor name={d.icon} size={17}/>{d.title}</span><b>{d.score}<small>/20</small></b></div><div className="bar-track"><span style={{width:`${d.score*5}%`}} className={d.score>=12?'bar-high':d.score>=7?'bar-mid':'bar-low'}/></div></div>)}</article>
+            <article className="score-card"><span className="card-eyebrow">مجموع مؤشرات الصعوبات في إجاباتك</span><div className="score-ring" style={{'--amount':`${score/120*100}%`} as CSSProperties}><div><strong>{score}</strong><span>من 120</span></div></div><p className="score-explanation"><strong>الأقل يعني صعوبات أقل، مش قدرة أقل.</strong></p><div className="band-pill">{band.title}</div><p>{band.note}</p><small>تصنيفات وصفية من تصميم الموقع، مش حدود تشخيصية معتمدة.</small></article>
+            <article className="breakdown-card"><div className="card-heading"><h2>تفصيل المحاور</h2><span>0–20 · الأعلى = صعوبات أكثر</span></div>{ranked.map(d=><div className="score-line" key={d.id}><div className="score-name"><span><IconFor name={d.icon} size={17}/>{d.title}</span><b>{d.score}<small>/20</small></b></div><div className="bar-track"><span style={{width:`${d.score*5}%`}} className={d.score>=12?'bar-high':d.score>=7?'bar-mid':'bar-low'}/></div><p className="score-explanation"><span className={'score-status '+describeDomainScore(d.score).tone}>{describeDomainScore(d.score).label}</span> {domainGuidance[d.id].meaning}</p></div>)}</article>
           </div>
-          <section className="insight-card"><div className="insight-symbol"><Sparkles size={28}/></div><div><span className="section-kicker">إيه اللي لفت نظرنا؟</span><h2>{mainAreas.length ? `أكتر جانب محتاج اهتمام: ${mainAreas[0].title}` : 'إجاباتك بتشير لصعوبات قليلة نسبيًا'}</h2><p>{mainAreas.length? `إجاباتك في ${mainAreas.map(d=>d.title).join('، ')} كانت أعلى نسبيًا من باقي المحاور. خلّينا نبدأ بعادة بسيطة بدل محاولة تغيير كل حاجة مرة واحدة.`:'حلو إن معظم المؤشرات قليلة. تقدر تركز على الحفاظ على العادات اللي بتساعدك في التعلم والنوم.'}</p></div></section>
 
-          <section className="free-actions" id="free-actions"><div className="section-top"><span className="section-kicker">خطواتك الأولى</span><h2>3 خطوات تقدر تجربها</h2></div><div className="advice-grid">{suggestedSteps.map(step=><article className="advice-card" key={step.title}><h3>{step.title}</h3><p>{step.description}</p><div className="reading-next">{step.action}</div></article>)}</div></section>
-          <ProBoundary title="افتح تفسير كل إجابة والأنماط المشتركة"><PremiumContent key={snapshotKey(answers)} kind="report" answers={answers}/></ProBoundary>
-          <section className="more-help-section" id="resources">
+          <details className="guided-details"><summary>أفكار إضافية لما تحتاجها<small>اختار فكرة واحدة؛ مش مطلوب تعملهم كلهم.</small></summary><section className="free-actions guided-details-body" id="free-actions"><div className="section-top"><span className="section-kicker">خطواتك الأولى</span><h2>3 خطوات تقدر تجربها</h2></div><div className="advice-grid">{suggestedSteps.map(step=><article className="advice-card" key={step.title}><h3>{step.title}</h3><p>{step.description}</p><div className="reading-next">{step.action}</div></article>)}</div></section></details>
+          <details className="guided-details" id="report-analysis"><summary>افتح التحليل المفصّل لإجاباتك<small>تفسير كل إجابة والأنماط المشتركة، لو حابب تتعمّق.</small></summary><div className="guided-details-body"><ProBoundary title="افتح تفسير كل إجابة والأنماط المشتركة"><PremiumContent key={snapshotKey(answers)} kind="report" answers={answers}/></ProBoundary></div></details>
+          <details className="guided-details" id="resources"><summary>فيديوهات وكتب ومصادر إضافية<small>اختياري. تقدر تبدأ خطتك من غير ما تقرأ أو تشوف كل ده.</small></summary><section className="more-help-section">
             <div className="section-top">
               <span className="section-kicker">لو حابب تتعمق شوية</span>
               <h2>فيديو وكتب تساعدك تكمل</h2>
@@ -335,8 +347,8 @@ export function App() {
             </div>
             <p className="resources-footnote">الكتب دي ترشيحات قراءة، مش علاج علمي مُعتمد. اختيارها حسب المحاور الأعلى في إجاباتك، مش تشخيص لحالتك.</p>
           </section>
-          <div className="quick-start"><div><h2>خطوتك الجاية: جرّب حاجة واحدة</h2><p>جهّز خطة من إجاباتك، أو اختار تمرينًا من المكتبة، أو ابدأ جلسة تركيز.</p></div><div className="pro-actions"><button className="btn btn-primary" onClick={()=>setScreen('journey')}>جهّز خطتي</button><button className="btn btn-soft" onClick={()=>setScreen('tools')}>افتح أدواتي</button></div></div>
-          <div className="results-actions"><button className="btn btn-primary" onClick={share}><Share2 size={18}/> شارك نتيجتك</button><button className="btn btn-soft" onClick={copy}><Copy size={18}/> انسخ الملخص</button><button className="btn btn-soft" onClick={()=>window.print()}><Download size={18}/> احفظ PDF</button><button className="btn btn-outline" onClick={reset}><RotateCcw size={17}/> إعادة الاختبار</button></div>
+          </details><div className="quick-start"><div><h2>خطوتك الجاية: جرّب حاجة واحدة</h2><p>جهّز خطة من إجاباتك، أو اختار تمرينًا من المكتبة، أو ابدأ جلسة تركيز.</p></div><div className="pro-actions"><button className="btn btn-primary" onClick={()=>setScreen('journey')}>جهّز خطتي</button><button className="btn btn-soft" onClick={()=>setScreen('tools')}>افتح أدواتي</button></div></div>
+          <div className="results-actions"><button className="btn btn-soft" onClick={share}><Share2 size={18}/> شارك نتيجتك</button><button className="btn btn-soft" onClick={copy}><Copy size={18}/> انسخ الملخص</button><button className="btn btn-soft" onClick={()=>window.print()}><Download size={18}/> احفظ PDF</button><button className="btn btn-outline" onClick={reset}><RotateCcw size={17}/> إعادة الاختبار</button></div>
           {feedback && <p className="feedback" role="status">{feedback}</p>}
           <p className="results-disclaimer"><ShieldCheck size={17}/> لو صعوبات التركيز أو النوم مؤثرة على حياتك بشكل واضح ومستمر، الأفضل تكلم مختص. الاختبار مش بديل عن تقييم طبي أو نفسي.</p>
         </div>}
@@ -359,7 +371,7 @@ export function App() {
           <div className="science-bottom"><h2>خلينا نفهم عاداتك من غير أحكام.</h2><button className="btn btn-primary" onClick={startQuiz}>ابدأ الاختبار <ArrowLeft size={18}/></button></div>
         </div>}
       </main>
-      <footer className="footer"><div className="container footer-inner"><div className="footer-brand"><BrainCircuit size={21}/> <strong>mindreset</strong><span>افهم عاداتك. اختار براحتك.</span></div><div className="footer-links"><button onClick={()=>setScreen('science')}>العلم والمصادر</button><button onClick={()=>setScreen('home')}>الرئيسية</button><a href="/privacy.html">سياسة الخصوصية</a></div><div className="footer-credit"><p>تقييم ذاتي للتوعية فقط — مش تشخيص طبي. © {new Date().getFullYear()} MindReset</p><span>Developed by <strong>Gerges Remon</strong></span></div></div></footer>
+      <footer className="footer"><div className="container footer-inner"><div className="footer-brand"><BrainCircuit size={21}/> <strong>mindreset</strong><span>افهم عاداتك. اختار براحتك.</span></div><div className="footer-links"><button onClick={()=>setScreen('guide')}>إرشادات الاستخدام</button><button onClick={()=>setScreen('science')}>العلم والمصادر</button><button onClick={()=>setScreen('home')}>الرئيسية</button><a href="/privacy.html">سياسة الخصوصية</a></div><div className="footer-credit"><p>تقييم ذاتي للتوعية فقط — مش تشخيص طبي. © {new Date().getFullYear()} MindReset</p><span>Developed by <strong>Gerges Remon</strong></span></div></div></footer>
     </div></ProProvider></AccountGate>
   )
 }

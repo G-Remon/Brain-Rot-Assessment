@@ -3,7 +3,7 @@ import {supabase} from './supabase'
 type UsageKind='page_view'|'test_started'|'test_completed'|'notification_open'
 const visits=new Map<string,{id:string;at:number}>()
 export async function trackUsage(owner:string|undefined,kind:UsageKind,route:string){
- if(!supabase||!owner||!['home','quiz','results','account','library','journey','tools','science','admin'].includes(route))return
+ if(!supabase||!owner||!['home','guide','quiz','results','account','library','journey','tools','science','admin'].includes(route))return
  try{
   const {data:{session}}=await supabase.auth.getSession();if(session?.user.id!==owner)return
   const key='mindreset-visit:'+owner;let visit=visits.get(owner)

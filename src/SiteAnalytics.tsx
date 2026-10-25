@@ -4,7 +4,7 @@ import {supabase} from './supabase'
 import {confirmAction} from './app-messages'
 import './notifications.css'
 type Analytics={startedAt:string;generatedAt:string;views:number;sessions:number;activeUsers:number;activeNow:number;signups:number;testStarts:number;testCompletions:number;planUsers:number;completedPlans:number;tasks:number;daily:{day:string;views:number;users:number}[];hourly:{hour:string;views:number}[];pages:{route:string;views:number}[];funnel:{started:number;completed:number};push:{devices:number;accepted:number;pending:number;failed:number}}
-const labels:Record<string,string>={home:'الرئيسية',quiz:'الاختبار',results:'النتيجة',account:'الحساب',library:'المكتبة',journey:'خطة 14 يوم',tools:'الأدوات',science:'المصادر',admin:'الإدارة'}
+const labels:Record<string,string>={home:'الرئيسية',guide:'إرشادات الاستخدام',quiz:'الاختبار',results:'النتيجة',account:'الحساب',library:'المكتبة',journey:'خطة 14 يوم',tools:'الأدوات',science:'المصادر',admin:'الإدارة'}
 export function SiteAnalytics({owner,refresh=0}:{owner:string;refresh?:number}){
  const [days,setDays]=useState(7),[data,setData]=useState<Analytics|null>(null),[retry,setRetry]=useState(0),[error,setError]=useState(''),[message,setMessage]=useState(''),[sending,setSending]=useState(false),[notice,setNotice]=useState(''),[hourly,setHourly]=useState(false)
  const updateId=useRef(crypto.randomUUID()),alive=useRef(true)
