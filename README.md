@@ -92,3 +92,14 @@ Exercises are original editorial activities with optional progression and reflec
 Validation: `npm test` and `npm run build`. Database checks use synthetic accounts in a rolled-back transaction to verify free access, owner isolation and admin denial. Browser end-to-end sign-in and real-account persistence require an available signed-in session.
 
 Audit regression tests in `tests/interaction-audit.test.tsx` exercise the actual React components in a DOM with mocked authentication and APIs: 30-answer completion, library/plan/tool routing, browser history, storage quota failure, plan retry, failed interruption saves and in-app confirmation cancel/confirm/Escape/unmount. `tests/assessment-persistence.test.ts` covers exact inserted-row responses and paginated history. These tests do not replace Google sign-in and real-account browser acceptance testing. DOM tests require Node 22.22.2+, 24.15.0+, or a newer supported Node release.
+
+
+## Admin phone notifications
+
+`docs/admin-notifications-schema.sql` adds a private event outbox, idempotent assessment completion metadata, per-admin Web Push devices, service-only key/delivery RPCs, a signup trigger and a minute cron retry. Apply it after the existing admin and free-access schemas. `supabase/functions/admin-notifications/` verifies admin JWTs or a private database webhook secret before any operation. VAPID keys are generated once on the server and remain in the private database; no private key or webhook secret belongs in the frontend or repository.
+
+`public/admin-sw.js` handles encrypted browser push notifications without intercepting requests or caching private data. Native notifications contain only a generic signup/completion message. Clicking opens the authenticated admin route. Administrators activate each phone explicitly; iOS/iPadOS requires an installed Home Screen web app on a supported OS. The settings page includes device opt-out and a real push test. A provider accepting a message is not proof it appeared on the device. Closed-browser delivery depends on OS/browser settings and connectivity. Delivery retries are bounded and event tags collapse duplicate notifications.
+
+The client reports completion only after the final question, independently of optional saved answers. Failed event reporting retains the same UUID for a later retry; no answers or scores are included. The admin activity feed shows up to 50 recent events. Account refresh reloads database results without browser navigation.
+
+Email reminders are **not enabled**. No sending provider has been provisioned or verified. The owner requires zero paid services and no purchased domain. A possible free option is Brevo's Free transactional plan, subject to provider approval and free-tier limits; connect a real free account and verified sender before implementing or enabling reminder delivery. Never claim email delivery or send reminder messages without that setup. No payment or subscription has been purchased.

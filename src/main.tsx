@@ -1,3 +1,4 @@
+import { enqueueAssessmentEvent, useAssessmentEvents } from './assessment-events'
 import { AppMessages } from './app-messages'
 import { confirmAction } from './app-messages'
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
@@ -64,6 +65,7 @@ export function App() {
   const [showMenu,setShowMenu]=useState(false)
   const [feedback,setFeedback]=useState('')
   const [storageWarning,setStorageWarning]=useState('')
+  useAssessmentEvents(user?.id)
   useEffect(()=>{
     if (!supabase) {setAuthChecking(false);return}
     let mounted = true
@@ -175,6 +177,7 @@ export function App() {
       setIndex(missing)
       return
     }
+    if(user)enqueueAssessmentEvent(user.id)
     setScreen('results')
   }
   async function reset(){
