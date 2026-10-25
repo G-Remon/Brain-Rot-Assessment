@@ -8,13 +8,13 @@ vi.mock('../src/pro-access',()=>({usePro:()=>({status:{isAdmin:true},loading:fal
 import {AdminPage} from '../src/AdminPage'
 it('refreshes the accounts from the server without reloading or leaving the page',async()=>{
  Object.assign(globalThis,{IS_REACT_ACT_ENVIRONMENT:true})
- const sample={summary:{users:1,newThisWeek:1,admins:1,savedAssessments:0,verifiedUsers:1},users:[],total:1,page:1,pageSize:20,generatedAt:'2026-10-25T12:00:00Z'}
+ const sample={summary:{users:1,newThisWeek:1,admins:1,savedAssessments:0,verifiedUsers:1},users:[{id:'member',name:'Test Member',email:'member@example.invalid',createdAt:'2026-10-25T12:00:00Z',lastSignInAt:null,verified:true,provider:'google',role:'member',assessmentCount:0,completedAssessmentCount:3}],total:1,page:1,pageSize:20,generatedAt:'2026-10-25T12:00:00Z'}
  mock.rpc.mockResolvedValue({data:sample,error:null});const host=document.createElement('div');document.body.append(host);const root=createRoot(host)
  try{
   await act(async()=>{root.render(<AdminPage owner="owner" onOpenTools={()=>{}}/>);await new Promise(r=>setTimeout(r,0))})
   await act(async()=>{[...host.querySelectorAll('button')].find(b=>b.textContent==='الحسابات')!.click()})
-  expect(host.textContent).toContain('1 حساب');mock.rpc.mockResolvedValue({data:{...sample,total:2},error:null})
+  expect(host.textContent).toContain('1 حساب');expect(host.querySelector('[data-metric=completed-assessments]')?.textContent).toBe('3');expect(host.querySelector('[data-metric=saved-assessments]')?.textContent).toBe('0');mock.rpc.mockResolvedValue({data:{...sample,total:2,users:[{...sample.users[0],completedAssessmentCount:4}]},error:null})
   await act(async()=>{[...host.querySelectorAll('button')].find(b=>b.textContent==='تحديث الحسابات')!.click();await new Promise(r=>setTimeout(r,0))})
-  expect(mock.rpc.mock.calls.filter(([name])=>name==='get_admin_overview')).toHaveLength(2);expect(host.textContent).toContain('2 حساب');expect(host.querySelector('.admin-accounts')).not.toBeNull()
+  expect(mock.rpc.mock.calls.filter(([name])=>name==='get_admin_overview')).toHaveLength(2);expect(host.textContent).toContain('2 حساب');expect(host.querySelector('.admin-accounts')).not.toBeNull();expect(host.querySelector('[data-metric=completed-assessments]')?.textContent).toBe('4');expect(host.querySelector('[data-metric=saved-assessments]')?.textContent).toBe('0')
  }finally{await act(async()=>root.unmount());host.remove()}
 })
