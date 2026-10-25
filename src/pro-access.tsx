@@ -1,8 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
-import { Crown, LockKeyhole, RefreshCcw } from 'lucide-react'
 import { supabase } from './supabase'
-export type ProStatus={active:boolean;validUntil:string|null;priceEgp:number;months:number;paymentReady:boolean}
-const empty:ProStatus={active:false,validUntil:null,priceEgp:50,months:3,paymentReady:false}
+export type ProStatus={active:boolean;isAdmin:boolean;validUntil:string|null}
+const empty:ProStatus={active:true,isAdmin:false,validUntil:null}
 export async function proRequest<T>(action:string,payload:Record<string,unknown>={}):Promise<T> {
   if(!supabase)throw new Error('login-required')
   const {data:{session}}=await supabase.auth.getSession()
@@ -19,7 +18,7 @@ export function ProProvider({owner,onUpgrade,children}:{owner:string|undefined;o
   useEffect(()=>{
     let alive=true;setLoading(true);setError(false);setStatus(empty)
     if(!owner){setLoading(false);return}
-    void proRequest<ProStatus>('status').then(value=>{if(alive)setStatus(value)}).catch(()=>{if(alive)setError(true)}).finally(()=>{if(alive)setLoading(false)})
+    void proRequest<ProStatus>('status').then(value=>{if(alive)setStatus({...value,active:true,validUntil:null})}).catch(()=>{if(alive)setError(true)}).finally(()=>{if(alive)setLoading(false)})
     return()=>{alive=false}
   },[owner,attempt])
 
@@ -32,13 +31,10 @@ export function ProProvider({owner,onUpgrade,children}:{owner:string|undefined;o
   return <Context.Provider value={{status,loading,error,refresh,onUpgrade}}>{children}</Context.Provider>
 }
 export const usePro=()=>useContext(Context)
-export function ProLock({title='افتح كل مميزات MindReset Pro',description='التحليل التفصيلي والخطط والمتابعة والأهداف في مكان واحد.'}:{title?:string;description?:string}){
-  const {onUpgrade}=usePro()
-  return <div className="pro-lock"><span className="pro-mark"><LockKeyhole size={19}/> PRO</span><h3>{title}</h3><p>{description}</p><button className="btn btn-primary" onClick={onUpgrade}><Crown size={17}/> اعرف مميزات Pro</button></div>
+export function AdminNavButton({onClick,active}:{onClick:()=>void;active:boolean}){
+  const {status,loading}=usePro()
+  return !loading&&status.isAdmin?<button className={active?'active admin-nav':'admin-nav'} aria-current={active?'page':undefined} onClick={onClick}>لوحة الإدارة</button>:null
 }
-export function ProBoundary({children,title}:{children:ReactNode;title?:string}){
-  const {status,loading,error,refresh}=usePro()
-  if(loading)return <div className="workspace-status" role="status">بنتأكد من صلاحيات حسابك...</div>
-  if(error)return <div className="workspace-error" role="alert">تعذّر التحقق من الاشتراك. <button onClick={refresh}><RefreshCcw size={16}/>جرّب تاني</button></div>
-  return status.active?<>{children}</>:<ProLock title={title}/>
-}
+export function AccessBadge(){const {status}=usePro();return status.isAdmin?<span className="access-badge admin">أدمن</span>:null}
+export function ProLock(_props:{title?:string;description?:string}){return null}
+export function ProBoundary({children}:{children:ReactNode;title?:string;fallback?:ReactNode}){return <>{children}</>}

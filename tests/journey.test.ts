@@ -5,6 +5,7 @@ import { buildJourney, defaultConfig, exercises, localDate, nextPlanDay, planDay
 const answer=(values:Partial<Record<DomainId,number>>={}):AnswerMap=>Object.fromEntries(questions.map(q=>[q.id,values[q.domain]??0]))
 const record=():PlanRecord=>({version:1,answers:answer(),assessment_key:snapshotKey(answer())!,config:defaultConfig,started_on:'2026-10-24',completed_days:[],notes:{}})
 describe('journey matching',()=>{
+  it('includes the deeper exercises across a full focus plan rather than cycling only four',()=>{const plan=buildJourney(answer({focus:4}),{...defaultConfig,track:'focus'});const ids=plan.days.map(d=>d.exerciseId).filter(id=>id?.startsWith('focus-'));expect(new Set(ids).size).toBe(6);expect(ids).toContain('focus-rebuild');expect(ids).toContain('focus-resume')})
   it('keeps low-signal people on optional maintenance',()=>{expect(recommendTrack(answer())).toBe('maintain');expect(recommendTrack(answer({focus:1,scroll:1,patience:1,memory:1,sleep:1,impact:1}))).toBe('maintain')})
   it.each(domains.map(d=>[d.id,d.id==='memory'?'learning':d.id]))('matches a dominant %s domain',(id,track)=>expect(recommendTrack(answer({[id]:3}))).toBe(track))
   it('uses different paths for equal totals',()=>{
@@ -26,9 +27,9 @@ describe('journey matching',()=>{
     const a=answer({sleep:4});const p=buildJourney(a,{track:'learning',minutes:20,context:'work'})
     expect(p.track).toBe('learning');expect(p.days[1].steps.join(' ')).toContain('شغلك');expect(p.days.every(d=>d.minutes<=20)).toBe(true)
   })
-  it('has four distinct practical exercises per domain with source and measurements',()=>{
-    expect(new Set(exercises.map(e=>e.id)).size).toBe(24)
-    domains.forEach(d=>expect(exercises.filter(e=>e.domain===d.id)).toHaveLength(4))
+  it('has six distinct practical exercises per domain with source and measurements',()=>{
+    expect(new Set(exercises.map(e=>e.id)).size).toBe(36)
+    domains.forEach(d=>expect(exercises.filter(e=>e.domain===d.id)).toHaveLength(6))
     exercises.forEach(e=>{expect(e.steps).toHaveLength(3);expect(e.measure).toBeTruthy();expect(e.tiny).toBeTruthy()})
   })
   it('handles 1000 diverse complete answer profiles consistently',()=>{

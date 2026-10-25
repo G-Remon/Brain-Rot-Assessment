@@ -1,9 +1,10 @@
+import { confirmAction } from './app-messages'
 import { useEffect, useMemo, useState } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { ArrowLeft, BookOpenCheck, CalendarDays, CheckCircle2, CloudUpload, History, LogOut, Mail, Pencil, RefreshCcw, ShieldCheck, Trash2, UserRound } from 'lucide-react'
 import { domains, domainScore, getBand, type AnswerMap } from './data'
 import { deleteSavedAssessment, listSavedAssessments, saveAssessment, snapshotKey, type SavedAssessment } from './assessment-history'
-import { usePro, ProBoundary } from './pro-access'
+import { ProBoundary } from './pro-access'
 import { supabase } from './supabase'
 import { loadDisplayName, saveDisplayName, validDisplayName } from './account-profile'
 
@@ -33,7 +34,7 @@ export function AccountPage({user,onBack,onViewSaved,onJourney,currentCandidate,
   const [displayName,setDisplayName]=useState<string>('')
   const [draftName,setDraftName]=useState<string>('')
 
-  const {status:proStatus}=usePro()
+
   const userId=user.id
   useEffect(()=>{
     let mounted=true
@@ -63,7 +64,7 @@ export function AccountPage({user,onBack,onViewSaved,onJourney,currentCandidate,
       if(alive) setError('مش قادرين نحمّل سجل الاختبارات دلوقتي. راجع الاتصال أو جرّب تحديث السجل.')
     }).finally(()=>{if(alive) setLoading(false)})
     return ()=>{alive=false}
-  },[userId,proStatus.active])
+  },[userId])
 
   const stats=useMemo(()=>{
     if (!records.length) return null
@@ -93,15 +94,15 @@ export function AccountPage({user,onBack,onViewSaved,onJourney,currentCandidate,
   }
 
   async function deleteProData() {
-    if(pending||!window.confirm('هتمسح كل الأهداف والجلسات والملاحظات والخطط وبيانات أدوات Pro من حسابك نهائيًا. نتائج الاختبارات هتفضل موجودة. متأكد؟'))return
+    if(pending||!await confirmAction('هتمسح كل الأهداف والجلسات والملاحظات والخطط وبيانات أدواتك من حسابك نهائيًا. نتائج الاختبارات هتفضل موجودة. متأكد؟'))return
     setPending('pro-delete');setError('');setNotice('')
-    try{if(!supabase)throw new Error('login-required');const {error}=await supabase.rpc('delete_my_pro_data');if(error)throw error;setNotice('بيانات أدوات Pro وخططها اتمسحت من حسابك.')}
-    catch{setError('تعذّر مسح بيانات Pro. جرب تاني بعد مراجعة الاتصال.')}
+    try{if(!supabase)throw new Error('login-required');const {error}=await supabase.rpc('delete_my_pro_data');if(error)throw error;setNotice('بيانات أدواتك وخططها اتمسحت من حسابك.')}
+    catch{setError('تعذّر مسح بياناتك. جرب تاني بعد مراجعة الاتصال.')}
     finally{setPending('')}
   }
 
   async function deleteAllRecords() {
-    if(pending || records.length===0 || !window.confirm('هتمسح كل نتائج الاختبارات المحفوظة على السحابة من حسابك نهائيًا. ده مش بيمسح إجابات جهازك. متأكد؟'))return
+    if(pending || records.length===0 || !await confirmAction('هتمسح كل نتائج الاختبارات المحفوظة على السحابة من حسابك نهائيًا. ده مش بيمسح إجابات جهازك. متأكد؟'))return
     setPending('delete-all');setError('');setNotice('')
     try {
       if(!supabase)throw new Error('auth-unavailable')
@@ -140,7 +141,7 @@ export function AccountPage({user,onBack,onViewSaved,onJourney,currentCandidate,
     setError('');setNotice('')
     try {
       const saved=await saveAssessment(userId,answers)
-      setRecords(previous=>proStatus.active?[saved,...previous]:[saved])
+      setRecords(previous=>[saved,...previous])
       setNotice(source==='guest'
         ? 'تم حفظ نتيجة اختبارك السابق في حسابك بعد موافقتك.'
         : 'نتيجتك اتحفظت في حسابك بنجاح، وتقدر ترجع لها من أي جهاز بعد تسجيل الدخول.')
@@ -150,7 +151,7 @@ export function AccountPage({user,onBack,onViewSaved,onJourney,currentCandidate,
   }
 
   async function deleteRecord(record:SavedAssessment) {
-    if(pending || !window.confirm('متأكد إنك عايز تمسح النتيجة دي نهائيًا من حسابك؟ مش هتقدر تسترجعها.'))return
+    if(pending || !await confirmAction('متأكد إنك عايز تمسح النتيجة دي نهائيًا من حسابك؟ مش هتقدر تسترجعها.'))return
     setPending(record.id);setError('');setNotice('')
     try {
       await deleteSavedAssessment(userId,record.id)
@@ -190,14 +191,14 @@ export function AccountPage({user,onBack,onViewSaved,onJourney,currentCandidate,
       {!editingName ? <><span>الاسم الظاهر في حسابك: <strong>{readableName}</strong></span><button type="button" className="account-profile-edit-btn" disabled={!!pending} onClick={()=>{setDraftName(displayName);setEditingName(true)}}><Pencil size={15}/> تعديل الاسم</button></> :
       <div className="account-profile-form"><label htmlFor="account-edit-name">اسم الحساب</label><input id="account-edit-name" autoComplete="name" maxLength={80} value={draftName} onChange={event=>setDraftName(event.target.value)} disabled={!!pending}/><button type="button" disabled={!!pending} onClick={()=>void saveName()}>حفظ</button><button type="button" disabled={!!pending} onClick={()=>setEditingName(false)}>إلغاء</button></div>}
     </div>
-    <ProBoundary title="خطتك والأهداف والمتابعة ضمن Pro"><div className="account-journey-banner"><div><span className="section-kicker">خطوتك الجاية</span><h2>كمّل خطتك، يوم بيوم</h2><p>ارجع لمسارك وملاحظاتك، أو جهّز خطة من آخر اختبار عملته.</p></div><button className="btn btn-primary" onClick={onJourney}><CalendarDays size={18}/> افتح خطتي</button></div></ProBoundary>
+    <ProBoundary title="خطتك والأهداف والمتابعة"><div className="account-journey-banner"><div><span className="section-kicker">خطوتك الجاية</span><h2>كمّل خطتك، يوم بيوم</h2><p>ارجع لمسارك وملاحظاتك، أو جهّز خطة من آخر اختبار عملته.</p></div><button className="btn btn-primary" onClick={onJourney}><CalendarDays size={18}/> افتح خطتي</button></div></ProBoundary>
     <div className="account-overview-grid">
       <div className="account-stat"><History size={20}/><span>نتائج محفوظة</span><strong>{loading?'—':records.length}</strong></div>
       <div className="account-stat"><BookOpenCheck size={20}/><span>آخر نتيجة محفوظة</span><strong>{stats?stats.latest+'/120':'—'}</strong></div>
       <div className="account-stat"><CalendarDays size={20}/><span>التغير بين أقدم وآخر نتيجة بالسجل</span><strong>{stats&&stats.count>1?(stats.difference>0?'+':'')+stats.difference:'—'}</strong><small>فرق وصفي في إجاباتك، مش مقياس طبي</small></div>
     </div>
 
-    {proStatus.active&&records.length>1&&<section className="account-comparison"><div className="account-section-head"><span className="section-kicker">التغيّر في كل محور</span><h2>المجموع مش الصورة كلها</h2><p>مقارنة أقدم وآخر نتيجة في السجل المعروض. الرقم الأقل يعني تكرارًا أقل في إجاباتك، ومش دليلًا وحده على تحسّن طبي.</p></div><div className="comparison-grid">{domains.map(domain=>{
+    {records.length>1&&<section className="account-comparison"><div className="account-section-head"><span className="section-kicker">التغيّر في كل محور</span><h2>المجموع مش الصورة كلها</h2><p>مقارنة أقدم وآخر نتيجة في السجل المعروض. الرقم الأقل يعني تكرارًا أقل في إجاباتك، ومش دليلًا وحده على تحسّن طبي.</p></div><div className="comparison-grid">{domains.map(domain=>{
       const before=domainScore(records[records.length-1].answers,domain.id),after=domainScore(records[0].answers,domain.id),delta=after-before
       return <article key={domain.id}><h3>{domain.short}</h3><div><span>{before}<small>قبل</small></span><ArrowLeft size={17}/><span>{after}<small>الأحدث</small></span></div><b className={delta<0?'decreased':delta>0?'increased':'unchanged'}>{delta<0?`أقل بـ${-delta}`:delta>0?`أعلى بـ${delta}`:'نفس الدرجة'}</b></article>
     })}</div></section>}
@@ -213,10 +214,10 @@ export function AccountPage({user,onBack,onViewSaved,onJourney,currentCandidate,
     {notice && <div className="auth-message notice account-feedback" role="status">{notice}</div>}
     {error && <div className="auth-message error account-feedback" role="alert">{error}</div>}
 
-    <div className="account-pro-privacy"><p>تقدر تمسح بيانات أدوات Pro وخططها حتى لو الاشتراك انتهى.</p><button className="pro-delete" disabled={!!pending} onClick={()=>void deleteProData()}>مسح بيانات وخطط Pro</button></div>
+    <div className="account-pro-privacy"><p>تقدر تمسح بيانات أدواتك وخططها في أي وقت.</p><button className="pro-delete" disabled={!!pending} onClick={()=>void deleteProData()}>مسح بيانات الأدوات والخطط</button></div>
     <div className="account-history-section">
       <div className="account-section-head account-history-heading">
-        <div><span className="section-kicker">سجل التطور</span><h2>اختباراتك المحفوظة</h2><p>{proStatus.active?'تقدر تفتح نتائجك السابقة وتقارن المحاور.':'Free يعرض آخر نتيجة محفوظة؛ سجل النتائج والمقارنات ضمن Pro.'}</p></div>
+        <div><span className="section-kicker">سجل التطور</span><h2>اختباراتك المحفوظة</h2><p>تقدر تفتح كل نتائجك السابقة وتقارن المحاور مجانًا.</p></div>
         <button className="account-refresh" type="button" disabled={!!pending} onClick={()=>void refresh()}><RefreshCcw size={16}/> تحديث</button>
       </div>
       {loading ? <div className="account-empty">جاري تحميل النتائج المحفوظة...</div> :

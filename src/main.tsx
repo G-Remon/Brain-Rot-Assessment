@@ -1,3 +1,5 @@
+import { AppMessages } from './app-messages'
+import { confirmAction } from './app-messages'
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { createRoot } from 'react-dom/client'
@@ -6,18 +8,20 @@ import { domains, questions, options, domainScore, totalScore, getBand, recommen
 import { arabicVideos } from './personalization'
 import { AccountGate } from './AccountGate'
 import { PremiumContent } from './PremiumContent'
-import { ProProvider, ProBoundary } from './pro-access'
+import { ProProvider, ProBoundary, AdminNavButton, AccessBadge } from './pro-access'
 import { ProDashboard } from './ProDashboard'
-import { ProPage } from './ProPage'
-import { JourneyWorkspace } from './JourneyWorkspace'
+import { AdminPage } from './AdminPage'
+import { LibraryPage, JourneyPage } from './FeaturePages'
+import { screenFromHash, routeHash, type AppScreen } from './app-routing'
 import { AuthPage } from './AuthPage'
 import { AccountPage } from './AccountPage'
 import { snapshotKey, validatedAssessment, type SavedAssessment } from './assessment-history'
 import { supabase } from './supabase'
 import { clearGoogleRedirect, hasGoogleAuthError, isGoogleRedirect } from './auth-urls'
 import './style.css'
+import './ui-polish.css'
 
-type Screen = 'home' | 'quiz' | 'results' | 'science' | 'auth' | 'account' | 'library' | 'journey' | 'pro' | 'upgrade'
+type Screen = AppScreen
 const KEY = 'mindreset-assessment-v1'
 const steps = ['افهم عاداتك', 'شوف تحليلك', 'ابدأ بخطوة بسيطة']
 const books = [
@@ -49,7 +53,7 @@ function readStored(owner: string): AnswerMap {
   } catch { return {} }
 }
 function App() {
-  const [screen,setScreen]=useState<Screen>(()=>isGoogleRedirect(window.location.search)?'auth':'home')
+  const [screen,setScreen]=useState<Screen>(()=>isGoogleRedirect(window.location.search)?'auth':screenFromHash(window.location.hash)??'home')
   const [user,setUser]=useState<User|null>(null)
   const [authChecking,setAuthChecking]=useState(true)
   const [oauthError,setOauthError]=useState(()=>hasGoogleAuthError(window.location.search))
@@ -105,6 +109,20 @@ function App() {
   },[])
   useEffect(()=>{localStorage.setItem(storageKey(KEY,storageOwner),JSON.stringify(answers))},[answers,storageOwner])
   useEffect(()=>{window.scrollTo({top:0,behavior:'instant'})},[screen,index])
+  useEffect(()=>{
+    const fromHistory=()=>{const next=screenFromHash(window.location.hash);if(next)setScreen(next);else if(!window.location.hash)setScreen('home');setShowMenu(false)}
+    window.addEventListener('popstate',fromHistory);window.addEventListener('hashchange',fromHistory)
+    return()=>{window.removeEventListener('popstate',fromHistory);window.removeEventListener('hashchange',fromHistory)}
+  },[])
+  useEffect(()=>{
+    if(authChecking||!user||screen==='auth')return
+    const next=routeHash(screen)
+    if(window.location.hash!==next&&!(screen==='home'&&!window.location.hash))window.history.pushState({mindresetScreen:screen},'',window.location.pathname+window.location.search+next)
+    const heading=document.querySelector<HTMLElement>('#main-content h1')
+    if(heading){heading.tabIndex=-1;heading.focus({preventScroll:true})}
+  },[screen,authChecking,user?.id])
+  useEffect(()=>{if(!showMenu)return;const close=(event:KeyboardEvent)=>{if(event.key==='Escape')setShowMenu(false)};window.addEventListener('keydown',close);return()=>window.removeEventListener('keydown',close)},[showMenu])
+
   const answered=Object.keys(answers).length
   const question=questions[index]
   const score=totalScore(answers)
@@ -122,14 +140,14 @@ function App() {
     else { setOauthError(false); setScreen('auth') }
     setShowMenu(false)
   }
-  function viewSavedAssessment(snapshot: SavedAssessment) {
+  async function viewSavedAssessment(snapshot: SavedAssessment) {
     const savedAnswers = validatedAssessment(snapshot.answers)
     if (!savedAnswers || snapshot.user_id !== user?.id) {
       setFeedback('تعذّر فتح النتيجة القديمة. جرّب تحديث السجل.')
       return
     }
     if (Object.keys(answers).length && snapshotKey(answers) !== snapshotKey(savedAnswers) &&
-      !window.confirm('فتح النتيجة القديمة هيستبدل إجابات اختبارك الحالي وخطة متابعتك على الجهاز فقط. النسخ المحفوظة في حسابك هتفضل زي ما هي. تكمل؟')) return
+      !await confirmAction('فتح النتيجة القديمة هيستبدل إجابات اختبارك الحالي وخطة متابعتك على الجهاز فقط. النسخ المحفوظة في حسابك هتفضل زي ما هي. تكمل؟')) return
     setAnswers(savedAnswers)
     setScreen('results')
     setFeedback('دي نتيجة محفوظة من اختبار سابق. تقدر تشوف تحليل إجاباتك بالكامل.')
@@ -158,8 +176,8 @@ function App() {
     }
     setScreen('results')
   }
-  function reset(){
-    if(!window.confirm('متأكد إنك عايز تبدأ من جديد؟ إجاباتك الحالية هتتمسح.'))return
+  async function reset(){
+    if(!await confirmAction('متأكد إنك عايز تبدأ من جديد؟ إجاباتك الحالية هتتمسح.'))return
     setAnswers({});setIndex(0);setScreen('quiz')
   }
   const shareText=`نتيجتي في MindReset (تقييم ذاتي غير طبي): ${score}/120 — ${band.title}\n${ranked.map(d=>`${d.title}: ${d.score}/20`).join('\n')}\nالدرجات وصفية ومش مقياس لضرر الدماغ.`
@@ -177,29 +195,31 @@ function App() {
     catch { setFeedback('النسخ مش متاح في المتصفح ده. جرب مشاركة النتيجة.') }
   }
   return (
-    <AccountGate user={user} loading={authChecking} oauthError={oauthError}><ProProvider key={user?.id} owner={user?.id} onUpgrade={()=>setScreen('upgrade')}><div className="app-shell">
+    <AccountGate user={user} loading={authChecking} oauthError={oauthError}><ProProvider key={user?.id} owner={user?.id} onUpgrade={()=>{setScreen('tools');setShowMenu(false)}}><div className="app-shell"><AppMessages/>
+      <a className="skip-link" href="#main-content">انتقل للمحتوى</a>
       <header className="site-header">
         <div className="container nav">
           <button className="brand" onClick={()=>setScreen('home')} aria-label="الصفحة الرئيسية">
             <span className="brand-icon"><BrainCircuit size={23}/></span>
             <span>mind<span className="brand-accent">reset</span><small>افهم عاداتك الرقمية</small></span>
           </button>
-          <nav className={showMenu?'nav-links open':'nav-links'} aria-label="القائمة الرئيسية">
-            <button onClick={()=>{setScreen('home');setShowMenu(false)}} className={screen==='home'?'active':''}>الرئيسية</button>
-            <button onClick={()=>{setScreen('science');setShowMenu(false)}} className={screen==='science'?'active':''}>ورا الاختبار إيه؟</button>
-            <button onClick={()=>{if(allAnswered)setScreen('results');else startQuiz();setShowMenu(false)}}> {allAnswered?'نتيجتك':'الاختبار'}</button>
-            <button onClick={()=>{setScreen('library');setShowMenu(false)}} className={screen==='library'?'active':''}>مكتبة الحلول</button>
-            <button onClick={()=>{setScreen('journey');setShowMenu(false)}} className={screen==='journey'?'active':''}>خطتي</button>
-            <button className={screen==='pro'||screen==='upgrade'?'active pro-nav':'pro-nav'} onClick={()=>{setScreen('pro');setShowMenu(false)}}>Pro · هدفي</button>
+          <nav id="main-navigation" className={showMenu?'nav-links open':'nav-links'} aria-label="القائمة الرئيسية">
+            <button onClick={()=>{setScreen('home');setShowMenu(false)}} aria-current={screen==='home'?'page':undefined} className={screen==='home'?'active':''}>الرئيسية</button>
+            <button onClick={async()=>{if(allAnswered)setScreen('results');else startQuiz();setShowMenu(false)}} aria-current={screen==='results'||screen==='quiz'?'page':undefined} className={screen==='results'||screen==='quiz'?'active':''}>{allAnswered?'نتيجتي':'الاختبار'}</button>
+            <button onClick={()=>{setScreen('library');setShowMenu(false)}} aria-current={screen==='library'?'page':undefined} className={screen==='library'?'active':''}>الحلول</button>
+            <button onClick={()=>{setScreen('journey');setShowMenu(false)}} aria-current={screen==='journey'?'page':undefined} className={screen==='journey'?'active':''}>خطتي</button>
+            <button className={screen==='tools'?'active pro-nav':'pro-nav'} onClick={()=>{setScreen('tools');setShowMenu(false)}} aria-current={screen==='tools'?'page':undefined}>أدواتي</button>
+            <AdminNavButton active={screen==='admin'} onClick={()=>{setScreen('admin');setShowMenu(false)}}/>
           </nav>
           <div className="nav-actions">
             <button className="nav-start" onClick={startQuiz}>{answered>0 && !allAnswered?'كمّل اختبارك':'ابدأ الاختبار'} <ArrowLeft size={17}/></button>
-            <button className="nav-account" onClick={openAccount} aria-label={user?'حسابي':'تسجيل الدخول'}><UserRound size={17}/><span>{user?'حسابي':'دخول بـ Google'}</span></button>
-            <button className="menu-toggle" onClick={()=>setShowMenu(p=>!p)} aria-label={showMenu?'قفل القائمة':'افتح القائمة'}>{showMenu?<X/>:<Menu/>}</button>
+            <button className="nav-account" onClick={openAccount} aria-label={user?'حسابي':'تسجيل الدخول'}><UserRound size={17}/><span>{user?'حسابي':'دخول بـ Google'}</span><AccessBadge/></button>
+            <button className="menu-toggle" aria-controls="main-navigation" aria-expanded={showMenu} onClick={()=>setShowMenu(p=>!p)} aria-label={showMenu?'قفل القائمة':'افتح القائمة'}>{showMenu?<X/>:<Menu/>}</button>
           </div>
         </div>
+        {showMenu&&<button className="nav-backdrop" aria-label="إغلاق القائمة" onClick={()=>setShowMenu(false)}/>}
       </header>
-      <main>
+      <main id="main-content" className={'main-content page-'+screen} tabIndex={-1}>
         {screen==='home' && <>
           <section className="hero container">
             <div className="hero-copy">
@@ -247,8 +267,8 @@ function App() {
         </section>}
         {screen==='results' && allAnswered && <div className="container results-page">
           <div className="results-intro"><span className="section-kicker">خلصت! عاش إنك كملت 👏</span><h1>دي صورتك الحالية...<br/><span className="highlight">مش حكم عليك.</span></h1><p>النتيجة بتلخّص إجاباتك عن آخر 14 يوم، مش بتحدد ذكاءك أو «نسبة ضرر دماغك».</p></div>
-          <div className="result-shortcuts"><button onClick={()=>document.getElementById('solutions')?.scrollIntoView({behavior:'smooth'})}>شوف الحلول اللي تناسبك <ArrowLeft size={16}/></button><button onClick={()=>document.getElementById('weekly-plan')?.scrollIntoView({behavior:'smooth'})}>خطة الـ14 يوم <ChevronLeft size={16}/></button><button className="result-save-shortcut" onClick={openAccount}><LockKeyhole size={16}/>{user?'احفظ نتيجتك في حسابك':'احفظ نتيجتك بحساب Google مجاني'}</button></div>
-          <nav className="report-navigation" aria-label="أقسام التقرير"><a href="#analysis">التحليل المفصّل</a><a href="#solutions">مكتبة الحلول</a><a href="#weekly-plan">خطتي العملية</a><a href="#resources">الكتب والمصادر</a></nav>
+          <div className="result-shortcuts"><button onClick={()=>setScreen('library')}>شوف الحلول اللي تناسبك <ArrowLeft size={16}/></button><button onClick={()=>setScreen('journey')}>خطة الـ14 يوم <ChevronLeft size={16}/></button><button className="result-save-shortcut" onClick={openAccount}><LockKeyhole size={16}/>{user?'احفظ نتيجتك في حسابك':'احفظ نتيجتك بحساب Google مجاني'}</button></div>
+          <nav className="report-navigation" aria-label="أقسام التقرير"><a href="#analysis">التحليل المفصّل</a><button onClick={()=>setScreen('library')}>مكتبة الحلول</button><button onClick={()=>setScreen('journey')}>خطتي العملية</button><a href="#resources">الكتب والمصادر</a></nav>
           <div className="results-grid">
             <article className="score-card"><span className="card-eyebrow">مجموع الإجابات</span><div className="score-ring" style={{'--amount':`${score/120*100}%`} as CSSProperties}><div><strong>{score}</strong><span>من 120</span></div></div><div className="band-pill">{band.title}</div><p>{band.note}</p><small>تصنيفات وصفية من تصميم الموقع، مش حدود تشخيصية معتمدة.</small></article>
             <article className="breakdown-card"><div className="card-heading"><h2>تفصيل المحاور</h2><span>من 20 لكل محور</span></div>{ranked.map(d=><div className="score-line" key={d.id}><div className="score-name"><span><IconFor name={d.icon} size={17}/>{d.title}</span><b>{d.score}<small>/20</small></b></div><div className="bar-track"><span style={{width:`${d.score*5}%`}} className={d.score>=12?'bar-high':d.score>=7?'bar-mid':'bar-low'}/></div></div>)}</article>
@@ -256,7 +276,7 @@ function App() {
           <section className="insight-card"><div className="insight-symbol"><Sparkles size={28}/></div><div><span className="section-kicker">إيه اللي لفت نظرنا؟</span><h2>{mainAreas.length ? `أكتر جانب محتاج اهتمام: ${mainAreas[0].title}` : 'إجاباتك بتشير لصعوبات قليلة نسبيًا'}</h2><p>{mainAreas.length? `إجاباتك في ${mainAreas.map(d=>d.title).join('، ')} كانت أعلى نسبيًا من باقي المحاور. خلّينا نبدأ بعادة بسيطة بدل محاولة تغيير كل حاجة مرة واحدة.`:'حلو إن معظم المؤشرات قليلة. تقدر تركز على الحفاظ على العادات اللي بتساعدك في التعلم والنوم.'}</p></div></section>
 
           <section className="free-actions" id="free-actions"><div className="section-top"><span className="section-kicker">خطواتك الأولى</span><h2>3 خطوات تقدر تجربها</h2></div><div className="advice-grid">{suggestedSteps.map(step=><article className="advice-card" key={step.title}><h3>{step.title}</h3><p>{step.description}</p><div className="reading-next">{step.action}</div></article>)}</div></section>
-          <ProBoundary title="افتح تفسير كل إجابة والأنماط المشتركة"><PremiumContent key={snapshotKey(answers)} kind="report" answers={answers}/><PremiumContent kind="library" answers={answers}/></ProBoundary>
+          <ProBoundary title="افتح تفسير كل إجابة والأنماط المشتركة"><PremiumContent key={snapshotKey(answers)} kind="report" answers={answers}/></ProBoundary>
           <section className="more-help-section" id="resources">
             <div className="section-top">
               <span className="section-kicker">لو حابب تتعمق شوية</span>
@@ -306,7 +326,7 @@ function App() {
             </div>
             <p className="resources-footnote">الكتب دي ترشيحات قراءة، مش علاج علمي مُعتمد. اختيارها حسب المحاور الأعلى في إجاباتك، مش تشخيص لحالتك.</p>
           </section>
-          <ProBoundary title="خطة شخصية ومتابعة يومية مع Pro"><JourneyWorkspace key={storageOwner} owner={storageOwner} answers={currentCandidate} onStartQuiz={reset} onLogin={openAccount}/></ProBoundary>
+          <div className="quick-start"><div><h2>خطوتك الجاية: جرّب حاجة واحدة</h2><p>جهّز خطة من إجاباتك، أو اختار تمرينًا من المكتبة، أو ابدأ جلسة تركيز.</p></div><div className="pro-actions"><button className="btn btn-primary" onClick={()=>setScreen('journey')}>جهّز خطتي</button><button className="btn btn-soft" onClick={()=>setScreen('tools')}>افتح أدواتي</button></div></div>
           <div className="results-actions"><button className="btn btn-primary" onClick={share}><Share2 size={18}/> شارك نتيجتك</button><button className="btn btn-soft" onClick={copy}><Copy size={18}/> انسخ الملخص</button><button className="btn btn-soft" onClick={()=>window.print()}><Download size={18}/> احفظ PDF</button><button className="btn btn-outline" onClick={reset}><RotateCcw size={17}/> إعادة الاختبار</button></div>
           {feedback && <p className="feedback" role="status">{feedback}</p>}
           <p className="results-disclaimer"><ShieldCheck size={17}/> لو صعوبات التركيز أو النوم مؤثرة على حياتك بشكل واضح ومستمر، الأفضل تكلم مختص. الاختبار مش بديل عن تقييم طبي أو نفسي.</p>
@@ -314,10 +334,10 @@ function App() {
         {screen==='results' && !allAnswered && <section className="container empty-result"><h1>لسه عندك شوية أسئلة</h1><p>كمّل الاختبار الأول عشان يطلعلك التقرير.</p><button className="btn btn-primary" onClick={startQuiz}>كمّل الأسئلة <ArrowLeft size={18}/></button></section>}
         {screen==='auth' && <AuthPage oauthError={oauthError} onBack={()=>{clearGoogleRedirect();setOauthError(false);setScreen('home')}}/>}
         {screen==='account' && (user ? <AccountPage user={user} onBack={()=>setScreen('home')} onViewSaved={viewSavedAssessment} onJourney={()=>setScreen('journey')} currentCandidate={currentCandidate} guestCandidate={guestCandidate}/> : <AuthPage onBack={()=>setScreen('home')}/>)}
-        {screen==='library' && <div className="container library-page"><ProBoundary title="المكتبة الكاملة والمسارات الشخصية مع Pro"><PremiumContent kind="library" answers={currentCandidate}/><JourneyWorkspace key={storageOwner} owner={storageOwner} answers={currentCandidate} onStartQuiz={startQuiz} onLogin={openAccount}/></ProBoundary></div>}
-        {screen==='journey' && <div className="container library-page"><ProBoundary title="خطة شخصية ومتابعة يومية مع Pro"><JourneyWorkspace key={storageOwner} owner={storageOwner} answers={currentCandidate} onStartQuiz={reset} onLogin={openAccount}/></ProBoundary><div className="journey-library-link"><button className="btn btn-soft" onClick={()=>setScreen('library')}>افتح مكتبة الحلول <ArrowLeft size={17}/></button></div></div>}
-        {screen==='pro' && user && <ProBoundary><ProDashboard key={user.id} owner={user.id}/></ProBoundary>}
-        {screen==='upgrade' && <ProPage onOpen={()=>setScreen('pro')}/>}
+        {screen==='library' && <LibraryPage answers={currentCandidate} onQuiz={startQuiz}/>}
+        {screen==='journey' && <JourneyPage owner={storageOwner} answers={currentCandidate} onQuiz={()=>allAnswered?reset():startQuiz()} onLogin={openAccount}/>}
+        {screen==='tools' && user && <ProBoundary><ProDashboard key={user.id} owner={user.id}/></ProBoundary>}
+        {screen==='admin' && user && <AdminPage owner={user.id} onOpenTools={()=>setScreen('tools')}/>}
         {screen==='science' && <div className="container science-page">
           <span className="section-kicker">من الآخر، وبوضوح</span><h1>الموقع ده مبني على إيه؟</h1>
           <p className="science-lead">مصطلح «تعفن الدماغ» أو Brain Rot تعبير منتشر، مش اسم مرض أو تشخيص طبي. عشان كده هنا بنقيّم عادات وسلوكيات بيبلغ عنها الشخص بنفسه، مش بنقيس صحة دماغه.</p>

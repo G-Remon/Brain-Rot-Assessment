@@ -79,17 +79,14 @@ npm run preview
 
 بوابة `AccountGate` تعرض الدخول فقط قبل فحص الجلسة، وتمنع تركيب واجهة الاختبار أو المكتبة أو الخطط لغير المسجلين. سياسة الخصوصية العامة تظل متاحة للمراجعة قبل الموافقة على الدخول. حماية البيانات الخاصة تُفرض في قاعدة البيانات أيضًا بواسطة RLS.
 
-## Free / Pro
+## All features are free
 
-السعر الذي اعتمده صاحب المشروع: 50 جنيهًا لثلاثة شهور تقويمية، بدون تجديد تلقائي. **التحصيل لم يُربط بعد**: لا يوجد Checkout أو Webhook دفع عامل، وزر الشراء معطّل. التفاصيل والخطوات المتبقية في `docs/PAYMOB_LAUNCH_CHECKLIST.md`.
+All authenticated accounts can use detailed reports, the 36-exercise library, personal plans, full assessment history and comparisons, goals, focus, programs, habits, recall cards and reviews. No payment or subscription is required. Old `#/pro` and `#/upgrade` URLs redirect to `#/tools`.
 
-- `src/pro/` و`src/ProDashboard.tsx`: الأهداف، الوقت التقديري والجدولة، جلسات التركيز، البرنامج الطويل، العادات، التعلّم والمراجعة.
-- `src/pro-model.ts`: مخطط البيانات والتحقق والقواعد الحسابية.
-- `src/pro-store.ts`: حفظ خاص بكل مستخدم مع منع التحديث من نسخة قديمة بجهاز آخر.
-- `src/pro-access.tsx`: قراءة أهلية الاشتراك من السيرفر، بدون ثقة في علم محلي أو بيانات يحررها المستخدم.
-- `supabase/functions/mindreset-pro/`: واجهة Pro المحمية بهوية Supabase وفحص `entitlements.valid_until` في كل طلب. `verify_jwt=false` لأن التحقق يتم صراحة داخل الدالة بواسطة `getUser(token)`؛ لا توجد عمليات بيانات قبل التحقق.
-- `docs/pro-access-schema.sql`: سياسات الخطط والسجل ومساحة Pro. الدوال ذات `SECURITY DEFINER` محصورة في مخطط غير مكشوف وتستخدم `auth.uid()` فقط، دون قبول معرّف صاحب الحساب من المتصفح.
+Apply `docs/free-access-schema.sql` after the historical schema files. Legacy table and RPC names are retained for compatibility with existing data; RLS now checks ownership without paid entitlements. Admin access remains a separate private server-verified role. The dashboard lists registration metadata only, never personal answers or notes. Owner identities are provisioned privately and never committed.
 
-عند تعديل محرك `src/journey.ts` أو `src/personalization.ts` أو `src/data.ts` حدّث النسخ المرفقة بدالة Edge قبل نشرها. ملف `shared/assessment-history.ts` يضم التحقق الخالص فقط دون عميل المتصفح.
+`src/app-messages.tsx` implements shared in-app confirmations using an accessible modal dialog (safe cancellation, Escape, focus restoration). Destructive operations run only after explicit confirmation. Save/error messages are rendered within the app and only report success after persistence.
 
-ملاحظة اختبار: الجلسة الكاملة من Google إلى حفظ Pro في متصفح مستخدم حقيقي لم تُختبر بعد. اختبارات قواعد البيانات تستخدم هويات اصطناعية داخل Transaction يُلغى بالكامل، ولا تنشئ اشتراكات مدفوعة حقيقية.
+Exercises are original editorial activities with optional progression and reflection, not treatments or guaranteed outcomes. If editing `src/journey.ts`, synchronize the Edge Function shared source. Google sign-in is required before any app page; privacy remains public.
+
+Validation: `npm test` and `npm run build`. Database checks use synthetic accounts in a rolled-back transaction to verify free access, owner isolation and admin denial. Browser end-to-end sign-in and real-account persistence require an available signed-in session.

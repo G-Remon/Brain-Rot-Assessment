@@ -16,11 +16,10 @@ Deno.serve(async(req:Request)=>{
     if(authError||!user)return reply({error:'login-required'},401)
     const raw=await req.text();if(raw.length>10000)return reply({error:'payload-too-large'},413)
     let body;try{body=JSON.parse(raw)}catch{return reply({error:'invalid-json'},400)}
-    const {data:entitlement,error}=await client.from('entitlements').select('tier,valid_until').eq('user_id',user.id).maybeSingle()
-    if(error)throw new Error('entitlement-unavailable')
-    const active=entitlement?.tier==='pro'&&Date.parse(entitlement.valid_until)>Date.now()
-    if(body.action==='status')return reply({active,validUntil:active?entitlement.valid_until:null,priceEgp:50,months:3,paymentReady:false})
-    if(!active)return reply({error:'pro-required'},403)
+    const {data:access,error}=await client.rpc('get_my_access_context')
+    if(error||!access)throw new Error('entitlement-unavailable')
+    const active=true
+    if(body.action==='status')return reply({active,isAdmin:access.is_admin===true,validUntil:null})
     if(body.action==='library')return reply({exercises})
     const answers=validatedAssessment(body.answers)
     if(!answers)return reply({error:'assessment-incomplete'},400)

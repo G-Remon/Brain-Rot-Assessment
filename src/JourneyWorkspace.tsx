@@ -1,3 +1,4 @@
+import { confirmAction } from './app-messages'
 import { useEffect, useRef, useState } from 'react'
 import { ArrowLeft, BookOpen, CalendarDays, Check, CheckCircle2, ChevronLeft, Cloud, RefreshCcw, Target } from 'lucide-react'
 import { validatedAssessment, snapshotKey } from './assessment-history'
@@ -44,7 +45,7 @@ export function JourneyWorkspace({owner,answers,onStartQuiz,onLogin}:{owner:stri
     setRemoteLoading(true)
     const previewRequest=proRequest<{journey:Journey}>('journey',{answers:previewAnswers,config:draft})
     const activeRequest=plan?(plan.assessment_key===previewKey&&JSON.stringify(plan.config)===JSON.stringify(draft)?previewRequest:proRequest<{journey:Journey}>('journey',{answers:plan.answers,config:plan.config})):Promise.resolve(null)
-    void Promise.all([previewRequest,activeRequest]).then(([nextPreview,nextActive])=>{if(current){setPreview(nextPreview.journey);setActive(nextActive?.journey??null)}}).catch(()=>{if(current){setPreview(null);setActive(null);setError('تعذّر تحميل خطوات الخطة. راجع الاتصال وصلاحية الاشتراك.')}}).finally(()=>{if(current)setRemoteLoading(false)})
+    void Promise.all([previewRequest,activeRequest]).then(([nextPreview,nextActive])=>{if(current){setPreview(nextPreview.journey);setActive(nextActive?.journey??null)}}).catch(()=>{if(current){setPreview(null);setActive(null);setError('تعذّر تحميل خطوات الخطة. راجع الاتصال وتسجيل الدخول.')}}).finally(()=>{if(current)setRemoteLoading(false)})
     return()=>{current=false}
   },[previewKey,activeKey,activeConfig,draft.track,draft.minutes,draft.context,reload])
   const shown=active??preview
@@ -63,13 +64,13 @@ export function JourneyWorkspace({owner,answers,onStartQuiz,onLogin}:{owner:stri
   }
   async function start() {
     if(!previewAnswers||!preview||remoteLoading||pending||loadFailed)return
-    if(plan&&!window.confirm('بدء مسار جديد هيستبدل خطة الـ14 يوم وملاحظاتها الحالية. نتائج اختباراتك هتفضل محفوظة. تكمل؟'))return
+    if(plan&&!await confirmAction('بدء مسار جديد هيستبدل خطة الـ14 يوم وملاحظاتها الحالية. نتائج اختباراتك هتفضل محفوظة. تكمل؟'))return
     const next:PlanRecord={version:1,answers:previewAnswers,assessment_key:snapshotKey(previewAnswers)!,config:{...draft},started_on:localDate(),completed_days:[],notes:{}}
     const saved=await save(next,owner==='guest'?'بدأت خطتك واتحفظت على الجهاز ده.':'بدأت خطتك واتحفظت في حسابك.')
     if(saved){setSelectedDay(1);setWeek(1);setNote('')}
   }
-  function chooseDay(next:number) {
-    if(dirty&&!window.confirm('فيه ملاحظة لسه ما اتحفظتش. تسيبها وتفتح يوم تاني؟'))return
+  async function chooseDay(next:number) {
+    if(dirty&&!await confirmAction('فيه ملاحظة لسه ما اتحفظتش. تسيبها وتفتح يوم تاني؟'))return
     setSelectedDay(next);setNote(plan?.notes[String(next)]??'');setNotice('')
   }
   async function updateDay(toggle:boolean) {
@@ -81,7 +82,7 @@ export function JourneyWorkspace({owner,answers,onStartQuiz,onLogin}:{owner:stri
     if(saved)setNote(saved.notes[String(selectedDay)]??'')
   }
   async function clearPlan() {
-    if(requestBusy.current||!window.confirm('مسح الخطة هيمسح تقدمها وملاحظاتها نهائيًا. نتائج الاختبارات هتفضل محفوظة. متأكد؟'))return
+    if(requestBusy.current||!await confirmAction('مسح الخطة هيمسح تقدمها وملاحظاتها نهائيًا. نتائج الاختبارات هتفضل محفوظة. متأكد؟'))return
     requestBusy.current=true;setPending(true);setError('');setNotice('')
     try{await removePlan(owner);if(alive.current){setPlan(null);setNote('');setSelectedDay(1);setWeek(1);setNotice('تم مسح الخطة وملاحظاتها.')}}
     catch{if(alive.current)setError('تعذّر مسح الخطة. جرب تاني بعد مراجعة الاتصال.')}
