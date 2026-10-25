@@ -30,14 +30,17 @@ export function isGoogleRedirect(search: string): boolean {
   return new URLSearchParams(search).get('auth_action') === 'google'
 }
 
-export function hasGoogleAuthError(search: string): boolean {
+export function hasGoogleAuthError(search: string,hash=''): boolean {
   const params=new URLSearchParams(search)
-  return isGoogleRedirect(search) && (params.has('error') || params.has('error_code'))
+  const fragment=new URLSearchParams(hash.replace(/^#/,''))
+  return isGoogleRedirect(search) && (params.has('error') || params.has('error_code') || fragment.has('error') || fragment.has('error_code'))
 }
 
 export function clearGoogleRedirect() {
   if (!isGoogleRedirect(window.location.search)) return
   const url=new URL(window.location.href)
   for(const key of ['auth_action','error','error_code','error_description'])url.searchParams.delete(key)
+  const fragment=new URLSearchParams(url.hash.slice(1))
+  if(fragment.has('error')||fragment.has('error_code'))url.hash=''
   window.history.replaceState(window.history.state,'',url.pathname+url.search+url.hash)
 }

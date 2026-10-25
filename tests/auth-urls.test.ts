@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { authRedirectUrl, isRecoveryRedirect, isGoogleRedirect, MINDRESET_URL } from '../src/auth-urls'
+import { authRedirectUrl, isRecoveryRedirect, isGoogleRedirect, hasGoogleAuthError, MINDRESET_URL } from '../src/auth-urls'
 
 describe('allowlisted authentication redirects', () => {
+  it('recognizes provider failures in either query or fragment without trusting a login marker',()=>{expect(hasGoogleAuthError('?auth_action=google','#error=access_denied')).toBe(true);expect(hasGoogleAuthError('?auth_action=google&error_code=bad_code')).toBe(true);expect(hasGoogleAuthError('?auth_action=google','#/home')).toBe(false)})
   it('uses production origin for preview or unexpected origins', () => {
     expect(authRedirectUrl('https://fake-login.example')).toBe(MINDRESET_URL)
     expect(authRedirectUrl('https://some-branch.vercel.app')).toBe(MINDRESET_URL)

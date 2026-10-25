@@ -46,25 +46,29 @@ async function verifiedOwner(expectedUserId: string) {
 
 export async function listSavedAssessments(owner: string): Promise<SavedAssessment[]> {
   await verifiedOwner(owner)
-  const { data, error } = await supabase!.from('assessments')
-    .select('id,user_id,answers,total_score,created_at')
-    .eq('user_id',owner)
-    .order('created_at',{ ascending:false })
-    .limit(40)
-  if (error) throw error
-  return (data ?? []).filter((row):row is SavedAssessment => isSafeSavedRow(row,owner))
+  const records:SavedAssessment[]=[]
+  const pageSize=200
+  for(let offset=0;;offset+=pageSize){
+    const {data,error}=await supabase!.from('assessments')
+      .select('id,user_id,answers,total_score,created_at').eq('user_id',owner)
+      .order('created_at',{ascending:false}).order('id',{ascending:false})
+      .range(offset,offset+pageSize-1)
+    if(error)throw error
+    const page=data??[]
+    records.push(...page.filter((row):row is SavedAssessment=>isSafeSavedRow(row,owner)))
+    if(page.length<pageSize)return records
+  }
 }
 
 export async function saveAssessment(owner: string, value: unknown): Promise<SavedAssessment> {
   const answers=validatedAssessment(value)
   if (!answers) throw new Error('assessment-incomplete')
   await verifiedOwner(owner)
-  const { error } = await supabase!.from('assessments')
-    .insert({user_id:owner, answers, total_score:totalScore(answers)})
+  // RETURNING identifies this exact write even when another tab saves concurrently.
+  const {data,error}=await supabase!.from('assessments')
+    .insert({user_id:owner,answers,total_score:totalScore(answers)})
+    .select('id,user_id,answers,total_score,created_at').single()
   if(error)throw error
-  // A separate read lets the newest-only Free RLS policy see the committed row.
-  const {data,error:readError}=await supabase!.from('assessments').select('id,user_id,answers,total_score,created_at').eq('user_id',owner).order('created_at',{ascending:false}).order('id',{ascending:false}).limit(1).single()
-  if(readError)throw readError
   if(!isSafeSavedRow(data,owner))throw new Error('invalid-server-response')
   return data
 }

@@ -27,7 +27,7 @@ export function AuthPage({ onBack, required = false, oauthError = false }: AuthP
       await beginGoogleSignIn(window.location.origin)
       // Supabase redirects the browser to Google; sign-in finishes after return.
     }catch{
-      setError('تعذّر فتح تسجيل الدخول بحساب Google. راجع تفعيل Google في إعدادات Authentication أو حاول مرة تانية.')
+      setError('تعذّر فتح تسجيل الدخول بحساب Google. راجع الاتصال وحاول مرة تانية بعد شوية.')
     }finally{
       setBusy(false)
     }

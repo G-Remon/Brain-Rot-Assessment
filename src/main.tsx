@@ -52,17 +52,18 @@ function readStored(owner: string): AnswerMap {
     return Object.fromEntries(Object.entries(parsed).filter(([id,value]) => questions.some(q=>q.id===id) && typeof value==='number' && Number.isInteger(value) && value>=0 && value<=4))
   } catch { return {} }
 }
-function App() {
+export function App() {
   const [screen,setScreen]=useState<Screen>(()=>isGoogleRedirect(window.location.search)?'auth':screenFromHash(window.location.hash)??'home')
   const [user,setUser]=useState<User|null>(null)
   const [authChecking,setAuthChecking]=useState(true)
-  const [oauthError,setOauthError]=useState(()=>hasGoogleAuthError(window.location.search))
+  const [oauthError,setOauthError]=useState(()=>hasGoogleAuthError(window.location.search,window.location.hash))
   const [storageOwner,setStorageOwner]=useState('guest')
   const storageOwnerRef=useRef('guest')
   const [answers,setAnswers]=useState<AnswerMap>(()=>readStored('guest'))
   const [index,setIndex]=useState(0)
   const [showMenu,setShowMenu]=useState(false)
   const [feedback,setFeedback]=useState('')
+  const [storageWarning,setStorageWarning]=useState('')
   useEffect(()=>{
     if (!supabase) {setAuthChecking(false);return}
     let mounted = true
@@ -91,7 +92,7 @@ function App() {
       if(!mounted)return
       syncUser(data.user ?? null)
       setAuthChecking(false)
-      if (hasGoogleAuthError(window.location.search)) {
+      if (hasGoogleAuthError(window.location.search,window.location.hash)||(!data.user&&isGoogleRedirect(window.location.search))) {
         setOauthError(true)
         setScreen('auth')
         clearGoogleRedirect()
@@ -107,7 +108,7 @@ function App() {
     })
     return ()=>{mounted=false;subscription.unsubscribe()}
   },[])
-  useEffect(()=>{localStorage.setItem(storageKey(KEY,storageOwner),JSON.stringify(answers))},[answers,storageOwner])
+  useEffect(()=>{try{localStorage.setItem(storageKey(KEY,storageOwner),JSON.stringify(answers));setStorageWarning('')}catch{setStorageWarning('الحفظ على الجهاز مش متاح. تقدر تكمّل الاختبار، لكن احفظ النتيجة في حسابك قبل ما تقفل الصفحة.')}},[answers,storageOwner])
   useEffect(()=>{window.scrollTo({top:0,behavior:'instant'})},[screen,index])
   useEffect(()=>{
     const fromHistory=()=>{const next=screenFromHash(window.location.hash);if(next)setScreen(next);else if(!window.location.hash)setScreen('home');setShowMenu(false)}
@@ -196,7 +197,7 @@ function App() {
   }
   return (
     <AccountGate user={user} loading={authChecking} oauthError={oauthError}><ProProvider key={user?.id} owner={user?.id} onUpgrade={()=>{setScreen('tools');setShowMenu(false)}}><div className="app-shell"><AppMessages/>
-      <a className="skip-link" href="#main-content">انتقل للمحتوى</a>
+      <a className="skip-link" href="#main-content" onClick={event=>{event.preventDefault();document.getElementById('main-content')?.focus()}}>انتقل للمحتوى</a>
       <header className="site-header">
         <div className="container nav">
           <button className="brand" onClick={()=>setScreen('home')} aria-label="الصفحة الرئيسية">
@@ -220,6 +221,7 @@ function App() {
         {showMenu&&<button className="nav-backdrop" aria-label="إغلاق القائمة" onClick={()=>setShowMenu(false)}/>}
       </header>
       <main id="main-content" className={'main-content page-'+screen} tabIndex={-1}>
+        {storageWarning&&<div className="container workspace-error" role="status">{storageWarning}</div>}
         {screen==='home' && <>
           <section className="hero container">
             <div className="hero-copy">
@@ -244,7 +246,7 @@ function App() {
             </div>
           </section>
           <section className="container quick-section">
-            <div className="section-top"><span className="section-kicker">ببساطة شديدة</span><h2>3 خطوات وتكون فاهم نفسك أكتر</h2><p>مفيش تسجيل، مفيش أسئلة شخصية حساسة، ومفيش لف ودوران.</p></div>
+            <div className="section-top"><span className="section-kicker">ببساطة شديدة</span><h2>3 خطوات وتكون فاهم نفسك أكتر</h2><p>كل المميزات مجانية بحسابك، ومش محتاج تكتب تفاصيل شخصية حساسة في الاختبار.</p></div>
             <div className="steps-grid">{steps.map((step,i)=><div className="step-card" key={step}><span className="step-number">0{i+1}</span><div className="step-symbol">{i===0?<Target/>:i===1?<Activity/>:<Lightbulb/>}</div><h3>{step}</h3><p>{['30 سؤال قصير، على قد يومك الحقيقي.','نقاط قوتك والحاجات اللي ممكن تحسنها.','نصايح واقعية مناسبة لإجاباتك.'][i]}</p></div>)}</div>
           </section>
           <section className="container domains-section">
@@ -254,7 +256,7 @@ function App() {
           <section className="container final-cta"><div><span className="section-kicker">جاهز تجرّب؟</span><h2>5 دقايق ممكن يفتحوا عينك على عاداتك</h2><p>بدل ما تحكم على نفسك، افهم نفسك الأول.</p></div><button onClick={startQuiz} className="btn btn-primary">ابدأ دلوقتي <ArrowLeft size={20}/></button></section>
         </>}
         {screen==='quiz' && <section className="quiz-layout container">
-          <div className="quiz-topline"><button className="quiet-button" onClick={()=>setScreen('home')}><X size={18}/> خروج وحفظ التقدم</button><button className="quiet-button quiz-restart" onClick={reset}><RotateCcw size={15}/> ابدأ من الأول</button></div>
+          <div className="quiz-topline"><button className="quiet-button" onClick={()=>setScreen('home')}><X size={18}/> {storageWarning?'خروج من الاختبار':'خروج وحفظ التقدم'}</button><button className="quiet-button quiz-restart" onClick={reset}><RotateCcw size={15}/> ابدأ من الأول</button></div>
           <div className="quiz-card">
             <div className="quiz-heading"><span className="section-kicker">{domains.find(d=>d.id===question.domain)?.title}</span><span className="question-counter">سؤال <b>{index+1}</b> من {questions.length}</span></div>
             <div className="progress-track" role="progressbar" aria-valuemin={0} aria-valuemax={questions.length} aria-valuenow={index+1} aria-label="تقدم الاختبار"><span style={{width:`${((index+1)/questions.length)*100}%`}}/></div>
@@ -268,7 +270,7 @@ function App() {
         {screen==='results' && allAnswered && <div className="container results-page">
           <div className="results-intro"><span className="section-kicker">خلصت! عاش إنك كملت 👏</span><h1>دي صورتك الحالية...<br/><span className="highlight">مش حكم عليك.</span></h1><p>النتيجة بتلخّص إجاباتك عن آخر 14 يوم، مش بتحدد ذكاءك أو «نسبة ضرر دماغك».</p></div>
           <div className="result-shortcuts"><button onClick={()=>setScreen('library')}>شوف الحلول اللي تناسبك <ArrowLeft size={16}/></button><button onClick={()=>setScreen('journey')}>خطة الـ14 يوم <ChevronLeft size={16}/></button><button className="result-save-shortcut" onClick={openAccount}><LockKeyhole size={16}/>{user?'احفظ نتيجتك في حسابك':'احفظ نتيجتك بحساب Google مجاني'}</button></div>
-          <nav className="report-navigation" aria-label="أقسام التقرير"><a href="#analysis">التحليل المفصّل</a><button onClick={()=>setScreen('library')}>مكتبة الحلول</button><button onClick={()=>setScreen('journey')}>خطتي العملية</button><a href="#resources">الكتب والمصادر</a></nav>
+          <nav className="report-navigation" aria-label="أقسام التقرير"><button onClick={()=>document.getElementById('analysis')?.scrollIntoView({behavior:'smooth'})}>التحليل المفصّل</button><button onClick={()=>setScreen('library')}>مكتبة الحلول</button><button onClick={()=>setScreen('journey')}>خطتي العملية</button><button onClick={()=>document.getElementById('resources')?.scrollIntoView({behavior:'smooth'})}>الكتب والمصادر</button></nav>
           <div className="results-grid">
             <article className="score-card"><span className="card-eyebrow">مجموع الإجابات</span><div className="score-ring" style={{'--amount':`${score/120*100}%`} as CSSProperties}><div><strong>{score}</strong><span>من 120</span></div></div><div className="band-pill">{band.title}</div><p>{band.note}</p><small>تصنيفات وصفية من تصميم الموقع، مش حدود تشخيصية معتمدة.</small></article>
             <article className="breakdown-card"><div className="card-heading"><h2>تفصيل المحاور</h2><span>من 20 لكل محور</span></div>{ranked.map(d=><div className="score-line" key={d.id}><div className="score-name"><span><IconFor name={d.icon} size={17}/>{d.title}</span><b>{d.score}<small>/20</small></b></div><div className="bar-track"><span style={{width:`${d.score*5}%`}} className={d.score>=12?'bar-high':d.score>=7?'bar-mid':'bar-low'}/></div></div>)}</article>
@@ -354,5 +356,6 @@ function App() {
     </div></ProProvider></AccountGate>
   )
 }
-createRoot(document.getElementById('root')!).render(<App/>)
+const mount=document.getElementById('root')
+if(mount)createRoot(mount).render(<App/>)
 

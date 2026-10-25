@@ -14,6 +14,7 @@ export function JourneyWorkspace({owner,answers,onStartQuiz,onLogin}:{owner:stri
   const [loading,setLoading]=useState(true)
   const [pending,setPending]=useState(false)
   const [error,setError]=useState('')
+  const [remoteError,setRemoteError]=useState('')
   const [notice,setNotice]=useState('')
   const [selectedDay,setSelectedDay]=useState(1)
   const [note,setNote]=useState('')
@@ -41,11 +42,11 @@ export function JourneyWorkspace({owner,answers,onStartQuiz,onLogin}:{owner:stri
   const activeConfig=JSON.stringify(plan?.config)
   useEffect(()=>{
     let current=true
-    if(!previewAnswers){setPreview(null);setActive(null);return}
-    setRemoteLoading(true)
+    if(!previewAnswers){setPreview(null);setActive(null);setRemoteLoading(false);setRemoteError('');return}
+    setRemoteLoading(true);setRemoteError('')
     const previewRequest=proRequest<{journey:Journey}>('journey',{answers:previewAnswers,config:draft})
     const activeRequest=plan?(plan.assessment_key===previewKey&&JSON.stringify(plan.config)===JSON.stringify(draft)?previewRequest:proRequest<{journey:Journey}>('journey',{answers:plan.answers,config:plan.config})):Promise.resolve(null)
-    void Promise.all([previewRequest,activeRequest]).then(([nextPreview,nextActive])=>{if(current){setPreview(nextPreview.journey);setActive(nextActive?.journey??null)}}).catch(()=>{if(current){setPreview(null);setActive(null);setError('تعذّر تحميل خطوات الخطة. راجع الاتصال وتسجيل الدخول.')}}).finally(()=>{if(current)setRemoteLoading(false)})
+    void Promise.all([previewRequest,activeRequest]).then(([nextPreview,nextActive])=>{if(current){setPreview(nextPreview.journey);setActive(nextActive?.journey??null)}}).catch(()=>{if(current){setPreview(null);setActive(null);setRemoteError('تعذّر تحميل خطوات الخطة. راجع الاتصال وتسجيل الدخول.')}}).finally(()=>{if(current)setRemoteLoading(false)})
     return()=>{current=false}
   },[previewKey,activeKey,activeConfig,draft.track,draft.minutes,draft.context,reload])
   const shown=active??preview
@@ -92,6 +93,7 @@ export function JourneyWorkspace({owner,answers,onStartQuiz,onLogin}:{owner:stri
     <div className="section-top"><span className="section-kicker">03 / من الفهم للتجربة</span><h2>خطة تناسب يومك، وتقدر تكملها</h2><p>10 مسارات، 3 اختيارات للوقت، وخطوات تتحدد حسب إجاباتك. جرّب 14 يومًا، وراقب اللي ناسبك.</p></div>
     {loading&&<div className="workspace-status" role="status">بنحمّل خطتك...</div>}
     {error&&<div className="workspace-error" role="alert"><p>{error}</p>{loadFailed&&<button onClick={()=>setReload(r=>r+1)}><RefreshCcw size={16}/>إعادة التحميل</button>}</div>}
+    {remoteError&&<div className="workspace-error" role="alert"><p>{remoteError}</p><button disabled={remoteLoading} onClick={()=>setReload(r=>r+1)}><RefreshCcw size={16}/>إعادة التحميل</button></div>}
     {!loading&&!loadFailed&&<>
       {!previewAnswers?<div className="journey-empty"><Target size={32}/><h3>خطتك بتبدأ بفهم يومك</h3><p>كمّل الاختبار عشان نرشّح مسارًا من إجاباتك. وتقدر تتصفح مكتبة الحلول دلوقتي.</p><button className="btn btn-primary" onClick={onStartQuiz}>ابدأ الاختبار <ArrowLeft size={17}/></button></div>:<>
         <details className="plan-config" open={!plan}><summary><span><Target size={18}/>{plan?'تجهيز مسار جديد أو تعديل الاختيارات':'ظبط الخطة على يومك'}</span><ChevronLeft size={17}/></summary><div className="plan-config-body">

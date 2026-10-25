@@ -131,7 +131,7 @@ export function AccountPage({user,onBack,onViewSaved,onJourney,currentCandidate,
 
   async function saveCandidate(source:'current'|'guest') {
     const answers=source==='guest'?guestCandidate:currentCandidate
-    if(!answers||pending) return
+    if(!answers||pending||loading) return
     const key=snapshotKey(answers)
     if(records.some(record=>snapshotKey(record.answers)===key)){
       setNotice('الإجابات دي محفوظة بالفعل في حسابك. تقدر تشوفها في سجل النتائج.')
@@ -206,8 +206,8 @@ export function AccountPage({user,onBack,onViewSaved,onJourney,currentCandidate,
     {(currentCandidate || guestCandidate) && <div className="account-save-section">
       <div className="account-section-head"><span className="section-kicker">اختياري بالكامل</span><h2>احفظ نتيجتك في حسابك</h2><p>هنحفظ إجابات الأسئلة الـ30 ودرجتك، عشان تقدر تراجع تقدمك فيما بعد. مش بنرفع أي إجابات من غير ما تضغط حفظ.</p></div>
       <div className="account-save-actions">
-        {currentCandidate && <button type="button" className="btn btn-primary" disabled={!!pending||!!currentSaved} onClick={()=>void saveCandidate('current')}><CloudUpload size={18}/>{currentSaved?'النتيجة الحالية محفوظة':pending==='current'?'جاري الحفظ...':'احفظ نتيجة الاختبار الحالية'}</button>}
-        {guestCandidate && !guestSaved && <button type="button" className="btn btn-soft" disabled={!!pending} onClick={()=>void saveCandidate('guest')}><CloudUpload size={18}/>{pending==='guest'?'جاري الحفظ...':'احفظ نتيجة اختبارك قبل تسجيل الدخول'}</button>}
+        {currentCandidate && <button type="button" className="btn btn-primary" disabled={loading||!!pending||!!currentSaved} onClick={()=>void saveCandidate('current')}><CloudUpload size={18}/>{currentSaved?'النتيجة الحالية محفوظة':pending==='current'?'جاري الحفظ...':'احفظ نتيجة الاختبار الحالية'}</button>}
+        {guestCandidate && !guestSaved && <button type="button" className="btn btn-soft" disabled={loading||!!pending} onClick={()=>void saveCandidate('guest')}><CloudUpload size={18}/>{pending==='guest'?'جاري الحفظ...':'احفظ نتيجة اختبارك قبل تسجيل الدخول'}</button>}
       </div>
     </div>}
 
