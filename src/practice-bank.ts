@@ -1,9 +1,10 @@
-import type {DomainId} from './data'
+import type {PracticeDomain} from './practice-domains'
+import {extraVisualQuestions,type PuzzleVisual} from './visual-practice-data'
 export type PracticeLevel=1|2|3
-export type PracticeQuestion={id:string;domain:DomainId;level:PracticeLevel;stimulus:string;prompt:string;options:string[];answer:number;explanation:string;recall:boolean}
+export type PracticeQuestion={id:string;domain:PracticeDomain;level:PracticeLevel;stimulus:string;prompt:string;options:string[];answer:number;explanation:string;recall:boolean;visual?:PuzzleVisual}
 type Row=[string,string,string,string,string,string,string]
 const bank:PracticeQuestion[]=[]
-function group(domain:DomainId,level:PracticeLevel,rows:Row[]){rows.forEach((r,i)=>{const offset=(bank.length+level)%4,options=[r[2],r[3],r[4],r[5]];for(let k=0;k<offset;k++)options.push(options.shift()!);bank.push({id:`${domain}-${level}-${i+1}`,domain,level,stimulus:r[0],prompt:r[1],options,answer:options.indexOf(r[2]),explanation:r[6],recall:domain==='memory'})})}
+function group(domain:PracticeDomain,level:PracticeLevel,rows:Row[]){rows.forEach((r,i)=>{const offset=(bank.length+level)%4,options=[r[2],r[3],r[4],r[5]];for(let k=0;k<offset;k++)options.push(options.shift()!);bank.push({id:`${domain}-${level}-${i+1}`,domain,level,stimulus:r[0],prompt:r[1],options,answer:options.indexOf(r[2]),explanation:r[6],recall:domain==='memory'})})}
 group('focus',1,[
  ['المهمة: اقرأ صفحة واحدة. حولك: صفحة الدرس، محادثة غير عاجلة، فيديو ترفيهي.','حسب المهمة، إيه اللي محتاج يفضل قدامك؟','صفحة الدرس','الفيديو والمحادثة','كل النوافذ','المحادثة فقط','المطلوب قراءة الصفحة؛ العناصر التانية مش لازمة للناتج المحدد.'],
  ['قائمة: كتاب أزرق، قلم أحمر، كوب أزرق، قلم أزرق.','اختار العنصر اللي يجمع الشرطين: قلم + أزرق.','قلم أزرق','كتاب أزرق','قلم أحمر','كوب أزرق','لازم الشرطين يتحققوا معًا، مش اللون أو النوع لوحده.'],
@@ -112,4 +113,4 @@ group('impact',3,[
  ['تجربة أسبوعين: وقت التصفح أقل، لكن عدد خطوات الهدف المكتملة ثابت.','إيه القرار الأقرب للتعلم من البيانات؟','أراجع وضوح الخطوات ووقت بدايتها بدل افتراض أن تقليل الشاشة كفاية','أعلن أن الهدف تحقق بالفعل','أتجاهل سجل الخطوات','أستنتج أن كل الأدوات بلا فائدة','قياس الهدف لم يتحسن بعد؛ راجع طريقة تحويل الوقت المتاح إلى عمل محدد.'],
  ['الهدف: تسليم مسودة. شرط الجودة: عنوان واضح، فقرتان، ومراجعة خطأ واحد. المتاح لا يسمح بالصور الاختيارية.','إيه النطاق المناسب؟','أنفذ الشروط الثلاثة وأؤجل الصور الاختيارية','أضيف صورًا وأحذف الفقرتين','أراجع الألوان فقط','ألغي العنوان لأنه سهل','عند ضيق الوقت احفظ الشروط الأساسية أولًا؛ الإضافات لا تعوّض المطلوب.']
 ])
-export const practiceBank:readonly PracticeQuestion[]=bank
+export const practiceBank:readonly PracticeQuestion[]=[...bank,...extraVisualQuestions]

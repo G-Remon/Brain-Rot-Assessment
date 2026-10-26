@@ -12,6 +12,8 @@ do $$declare attempt_id uuid:=gen_random_uuid();result jsonb;begin
  result:=public.get_my_practice_progress();
  if jsonb_array_length(result)<>1 or (result->0->>'correct')::integer<>4 then raise exception 'best score or owner isolation failed';end if;
  if (select count(*) from public.practice_attempts)<>3 then raise exception 'idempotency or read isolation failed';end if;
+ insert into public.practice_attempts(id,user_id,domain,level,correct) select gen_random_uuid(),auth.uid(),d,1,4 from unnest(array['math','cards','visual']) d;
+ if jsonb_array_length(public.get_my_practice_progress())<>4 then raise exception 'new visual domain save failed';end if;
  begin insert into public.practice_attempts(id,user_id,domain,level,correct) values(gen_random_uuid(),current_setting('mindreset.test_b')::uuid,'focus',1,4);raise exception 'foreign insert accepted';exception when insufficient_privilege then null;end;
  begin update public.practice_attempts set correct=4;raise exception 'update accepted';exception when insufficient_privilege then null;end;
  begin insert into public.practice_attempts(id,user_id,domain,level,correct,completed_at) values(gen_random_uuid(),auth.uid(),'focus',1,4,'2000-01-01');raise exception 'forged timestamp accepted';exception when insufficient_privilege then null;end;

@@ -2,7 +2,7 @@
 create table public.practice_attempts(
  id uuid primary key,
  user_id uuid not null references auth.users(id) on delete cascade,
- domain text not null check(domain in('focus','scroll','patience','memory','sleep','impact')),
+ domain text not null check(domain in('focus','scroll','patience','memory','sleep','impact','math','cards','visual')),
  level smallint not null check(level between 1 and 3),
  correct smallint not null check(correct between 0 and 4),
  total smallint not null default 4 check(total=4),
