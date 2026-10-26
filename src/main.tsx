@@ -1,3 +1,5 @@
+import { consumeLoginIntent } from './login-intent'
+import { VisitorJourney, VisitorTools } from './VisitorPages'
 import { UserGuide, ResultOrientation } from './UserGuide'
 import { describeDomainScore, domainGuidance } from './user-guidance'
 import { NotificationCenter } from './notification-center'
@@ -64,7 +66,7 @@ export function App() {
   const [oauthError,setOauthError]=useState(()=>hasGoogleAuthError(window.location.search,window.location.hash))
   const [storageOwner,setStorageOwner]=useState('guest')
   const storageOwnerRef=useRef('guest')
-  const [answers,setAnswers]=useState<AnswerMap>(()=>readStored('guest'))
+  const [answers,setAnswers]=useState<AnswerMap>({})
   const [index,setIndex]=useState(0)
   const [showMenu,setShowMenu]=useState(false)
   const [feedback,setFeedback]=useState('')
@@ -80,7 +82,7 @@ export function App() {
       if (storageOwnerRef.current !== owner) {
         storageOwnerRef.current=owner
         setStorageOwner(owner)
-        setAnswers(readStored(owner))
+        setAnswers(nextUser?readStored(owner):{})
         setIndex(0)
       }
       setUser(nextUser)
@@ -88,7 +90,7 @@ export function App() {
       // session permits entry into the personal dashboard.
       if (nextUser && isGoogleRedirect(window.location.search)) {
         setOauthError(false)
-        setScreen('account')
+        setScreen(consumeLoginIntent())
         clearGoogleRedirect()
       }
     }
@@ -106,7 +108,7 @@ export function App() {
       }
     }).catch(()=>{
       if(!mounted)return
-      setUser(null);setAuthChecking(false)
+      syncUser(null);setAuthChecking(false)
       if (isGoogleRedirect(window.location.search)) {
         setOauthError(true)
         setScreen('auth')
@@ -115,7 +117,7 @@ export function App() {
     })
     return ()=>{mounted=false;subscription.unsubscribe()}
   },[])
-  useEffect(()=>{try{localStorage.setItem(storageKey(KEY,storageOwner),JSON.stringify(answers));setStorageWarning('')}catch{setStorageWarning('الحفظ على الجهاز مش متاح. تقدر تكمّل الاختبار، لكن احفظ النتيجة في حسابك قبل ما تقفل الصفحة.')}},[answers,storageOwner])
+  useEffect(()=>{if(storageOwner==='guest')return;try{localStorage.setItem(storageKey(KEY,storageOwner),JSON.stringify(answers));setStorageWarning('')}catch{setStorageWarning('الحفظ على الجهاز مش متاح. تقدر تكمّل الاختبار، لكن احفظ النتيجة في حسابك قبل ما تقفل الصفحة.')}},[answers,storageOwner])
   useEffect(()=>{window.scrollTo({top:0,behavior:'instant'})},[screen,index])
   useEffect(()=>{
     const fromHistory=()=>{const next=screenFromHash(window.location.hash);if(next)setScreen(next);else if(!window.location.hash)setScreen('home');setShowMenu(false)}
@@ -123,7 +125,7 @@ export function App() {
     return()=>{window.removeEventListener('popstate',fromHistory);window.removeEventListener('hashchange',fromHistory)}
   },[])
   useEffect(()=>{
-    if(authChecking||!user||screen==='auth')return
+    if(authChecking||screen==='auth')return
     const next=routeHash(screen)
     if(window.location.hash!==next&&!window.location.hash.startsWith(next+'?')&&!(screen==='home'&&!window.location.hash))window.history.pushState({mindresetScreen:screen},'',window.location.pathname+window.location.search+next)
     const heading=document.querySelector<HTMLElement>('#main-content h1')
@@ -212,7 +214,7 @@ export function App() {
     catch { setFeedback('النسخ مش متاح في المتصفح ده. جرب مشاركة النتيجة.') }
   }
   return (
-    <AccountGate user={user} loading={authChecking} oauthError={oauthError}><ProProvider key={user?.id} owner={user?.id} onUpgrade={()=>{setScreen('tools');setShowMenu(false)}}><div className="app-shell"><AppMessages/>{user&&<NotificationCenter key={user.id} owner={user.id}/>}
+    <AccountGate user={user} loading={authChecking} oauthError={oauthError} required={['quiz','results','admin'].includes(screen)} forQuiz={screen==='quiz'} onBack={()=>{consumeLoginIntent();setScreen('home')}}><ProProvider key={user?.id} owner={user?.id} onUpgrade={()=>{setScreen('tools');setShowMenu(false)}}><div className="app-shell"><AppMessages/>{user&&<NotificationCenter key={user.id} owner={user.id}/>}
       <a className="skip-link" href="#main-content" onClick={event=>{event.preventDefault();document.getElementById('main-content')?.focus()}}>انتقل للمحتوى</a>
       <header className="site-header">
         <div className="container nav">
@@ -251,7 +253,7 @@ export function App() {
                 <button className="btn btn-primary" onClick={startQuiz}>{answered>0 && !allAnswered?'كمّل من مكانك':'يلا نبدأ الاختبار'} <ArrowLeft size={20}/></button>
                 <button className="btn btn-soft" onClick={()=>setScreen('guide')}>أبدأ منين؟ <ChevronLeft size={19}/></button>
               </div>
-              <div className="hero-proof"><span><Clock3 size={16}/> حوالي 5 دقايق</span><span><LockKeyhole size={16}/> حسابك خاص بيك</span><span><CheckCircle2 size={16}/> نتيجتك فورًا</span></div>
+              <div className="hero-proof"><span><Clock3 size={16}/> حوالي 5 دقايق</span><span><LockKeyhole size={16}/> التصفح من غير حساب</span><span><CheckCircle2 size={16}/> نتيجتك فورًا</span></div>
               <p className="hero-disclaimer">ده تقييم ذاتي استرشادي، مش تشخيص طبي ولا مقياس لتلف الدماغ.</p>
             </div>
             <div className="hero-art" aria-hidden="true">
@@ -265,7 +267,7 @@ export function App() {
             </div>
           </section>
           <section className="container quick-section">
-            <div className="section-top"><span className="section-kicker">ببساطة شديدة</span><h2>3 خطوات وتكون فاهم نفسك أكتر</h2><p>كل المميزات مجانية بحسابك، ومش محتاج تكتب تفاصيل شخصية حساسة في الاختبار.</p></div>
+            <div className="section-top"><span className="section-kicker">ببساطة شديدة</span><h2>3 خطوات وتكون فاهم نفسك أكتر</h2><p>تصفّح براحتك من غير حساب. التسجيل مطلوب عند بدء الاختبار، وكل المميزات مجانية.</p></div>
             <div className="steps-grid">{steps.map((step,i)=><div className="step-card" key={step}><span className="step-number">0{i+1}</span><div className="step-symbol">{i===0?<Target/>:i===1?<Activity/>:<Lightbulb/>}</div><h3>{step}</h3><p>{['30 سؤال قصير، على قد يومك الحقيقي.','نقاط قوتك والحاجات اللي ممكن تحسنها.','نصايح واقعية مناسبة لإجاباتك.'][i]}</p></div>)}</div>
           </section>
           <section className="container domains-section">
@@ -353,10 +355,12 @@ export function App() {
           <p className="results-disclaimer"><ShieldCheck size={17}/> لو صعوبات التركيز أو النوم مؤثرة على حياتك بشكل واضح ومستمر، الأفضل تكلم مختص. الاختبار مش بديل عن تقييم طبي أو نفسي.</p>
         </div>}
         {screen==='results' && !allAnswered && <section className="container empty-result"><h1>لسه عندك شوية أسئلة</h1><p>كمّل الاختبار الأول عشان يطلعلك التقرير.</p><button className="btn btn-primary" onClick={startQuiz}>كمّل الأسئلة <ArrowLeft size={18}/></button></section>}
-        {screen==='auth' && <AuthPage oauthError={oauthError} onBack={()=>{clearGoogleRedirect();setOauthError(false);setScreen('home')}}/>}
+        {screen==='auth' && <AuthPage oauthError={oauthError} onBack={()=>{clearGoogleRedirect();consumeLoginIntent();setOauthError(false);setScreen('home')}}/>}
         {screen==='account' && (user ? <AccountPage user={user} onBack={()=>setScreen('home')} onViewSaved={viewSavedAssessment} onJourney={()=>setScreen('journey')} currentCandidate={currentCandidate} guestCandidate={guestCandidate}/> : <AuthPage onBack={()=>setScreen('home')}/>)}
-        {screen==='library' && <LibraryPage answers={currentCandidate} onQuiz={startQuiz}/>}
-        {screen==='journey' && <JourneyPage owner={storageOwner} answers={currentCandidate} onQuiz={()=>allAnswered?reset():startQuiz()} onLogin={openAccount}/>}
+        {screen==='library' && <LibraryPage publicView={!user} answers={currentCandidate} onQuiz={startQuiz}/>}
+        {screen==='journey' && !user && <VisitorJourney onQuiz={startQuiz}/>}
+        {screen==='journey' && user && <JourneyPage owner={storageOwner} answers={currentCandidate} onQuiz={()=>allAnswered?reset():startQuiz()} onLogin={openAccount}/>}
+        {screen==='tools' && !user && <VisitorTools onQuiz={startQuiz}/>}
         {screen==='tools' && user && <ProBoundary><ProDashboard key={user.id} owner={user.id}/></ProBoundary>}
         {screen==='admin' && user && <AdminPage owner={user.id} onOpenTools={()=>setScreen('tools')}/>}
         {screen==='science' && <div className="container science-page">

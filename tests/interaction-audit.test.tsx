@@ -23,7 +23,7 @@ function button(text:string,scope:ParentNode=host){const b=[...scope.querySelect
 async function click(element:HTMLElement){await act(async()=>{element.click()});await flush()}
 async function render(element:React.ReactNode){await act(async()=>{root.render(element)});await flush()}
 beforeEach(()=>{
- vi.clearAllMocks();window.history.replaceState(null,'','/');localStorage.clear()
+ vi.clearAllMocks();window.history.replaceState(null,'','/');localStorage.clear();sessionStorage.clear()
  Object.assign(globalThis,{IS_REACT_ACT_ENVIRONMENT:true})
  window.scrollTo=vi.fn();Element.prototype.scrollIntoView=vi.fn()
  HTMLDialogElement.prototype.showModal=function(){this.open=true}
@@ -35,6 +35,24 @@ beforeEach(()=>{
 })
 afterEach(async()=>{await act(async()=>root.unmount());host.remove();vi.restoreAllMocks()})
 describe('actual application navigation and failure states',()=>{
+ it('lets signed-out visitors browse real content and requires login only when starting the quiz',async()=>{
+  mock.getUser.mockResolvedValue({data:{user:null},error:null});await render(<App/>);expect(host.querySelector('.hero')).not.toBeNull();
+  for(const name of ['الحلول','خطتي','أدواتي','إرشادات'])await click(button(name,host.querySelector('nav')!));
+  await click(button('الحلول',host.querySelector('nav')!));expect(host.querySelectorAll('.solution-card')).toHaveLength(36);expect(host.textContent).not.toContain('تعذّر تحميل المحتوى');
+  await click(button('الاختبار',host.querySelector('nav')!));expect(host.textContent).toContain('سجّل دخولك عشان تبدأ الاختبار');expect(host.querySelector('.answer-option')).toBeNull();
+  await click(button('الرجوع للموقع'));expect(host.querySelector('.hero')).not.toBeNull();expect(mock.invoke).not.toHaveBeenCalled();
+ })
+ it('protects a direct quiz link from guests and leaves legacy local answers untouched',async()=>{
+  const legacy=JSON.stringify(full);localStorage.setItem('mindreset-assessment-v1',legacy);window.history.replaceState(null,'','/#/quiz');mock.getUser.mockResolvedValue({data:{user:null},error:null});
+  await render(<App/>);expect(host.querySelector('.answer-option')).toBeNull();expect(host.textContent).toContain('سجّل دخولك عشان تبدأ الاختبار');expect(localStorage.getItem('mindreset-assessment-v1')).toBe(legacy);
+ })
+ it('opens home instead of the account page after ordinary Google registration or sign-in',async()=>{
+  window.history.replaceState(null,'','/?auth_action=google');await render(<App/>);expect(host.querySelector('.hero')).not.toBeNull();expect(host.querySelector('.account-dashboard')).toBeNull();expect(['','#/home']).toContain(window.location.hash);
+ })
+ it('continues to the quiz after a verified Google callback for a visitor who started it',async()=>{
+  sessionStorage.setItem('mindreset-login-intent-v1',JSON.stringify({screen:'quiz',createdAt:Date.now()}));window.history.replaceState(null,'','/?auth_action=google');await render(<App/>);
+  expect(host.querySelector('.quiz-card')).not.toBeNull();expect(window.location.hash).toBe('#/quiz');expect(sessionStorage.getItem('mindreset-login-intent-v1')).toBeNull();expect(window.location.search).toBe('');
+ })
  it('opens all member routes and keeps administration private',async()=>{
   await render(<App/>);
   for(const name of ['الحلول','خطتي','أدواتي','الرئيسية'])await click(button(name,host.querySelector('nav')!))
@@ -73,7 +91,7 @@ describe('actual application navigation and failure states',()=>{
  })
  it('shows a recoverable error when Google returns without a verified session',async()=>{
   window.history.replaceState(null,'','/?auth_action=google');mock.getUser.mockResolvedValue({data:{user:null},error:Error('invalid callback')});await render(<App/>);
-  expect(host.textContent).toContain('تسجيل الدخول عبر Google ما اكتملش');expect(host.querySelector('.nav-links')).toBeNull();expect(window.location.search).toBe('')
+  expect(host.textContent).toContain('تسجيل الدخول عبر Google ما اكتملش');expect(host.querySelector('.nav-links')).not.toBeNull();expect(host.querySelector('.quiz-card')).toBeNull();expect(window.location.search).toBe('')
  })
  it('restores the correct page when moving back and forward through navigation',async()=>{
   await render(<App/>);await click(button('الحلول',host.querySelector('nav')!));await click(button('أدواتي',host.querySelector('nav')!));

@@ -118,8 +118,12 @@ No email provider, paid integration, or billing resource was added. Existing fre
 
 ### Guided first use
 
-`#/guide` explains the score direction (lower means fewer reported difficulties), 0–20 domain scores versus the 0–120 total, and when/how to use each page. It is available from main navigation, the home-page secondary action, the result summary, page wayfinding, and the footer. Authentication remains required.
+`#/guide` explains the score direction (lower means fewer reported difficulties), 0–20 domain scores versus the 0–120 total, and when/how to use each page. It is available from main navigation, the home-page secondary action, the result summary, page wayfinding, and the footer. The guide is available without authentication; the quiz and personal data require sign-in.
 
 Results begin with a plain-language explanation, low-difficulty areas when supported by the answers, and one suggested starting action. Each domain now includes a textual interpretation. Optional analysis, extra suggestions and resources use expandable sections; report navigation opens the correct section, and printing temporarily expands the content before restoring the reader's view. Existing answers, saved results and progress are preserved.
 
 Plan, library, account and all six tool panels contain contextual instructions with purpose, steps and an expected outcome. Descriptive score labels reuse the existing visual ranges; they are not diagnostic thresholds or measures of ability. The guide page is included in the existing authenticated aggregate page-view instrumentation.
+
+### Public browsing, account required for the quiz
+
+Visitors can browse the home page, guide, sources, all 36 exercises, and introductory plan/tool pages without authentication. Starting or deep-linking to the quiz requires a verified session; saved results, personal workspaces and administration remain protected. A short-lived per-tab navigation intent returns a visitor to the quiz after Google sign-in without changing the existing allowlisted callback URL. Public browsing never loads a previous user's local answers or writes over legacy guest answers. Authentication and database authorization rules are unchanged.

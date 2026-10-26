@@ -6,11 +6,12 @@ import { beginGoogleSignIn } from './google-auth'
 // MindReset never receives a Google password or one-time code.
 type AuthPageProps = {
   required?: boolean
+  forQuiz?: boolean
   onBack: () => void
   oauthError?: boolean
 }
 
-export function AuthPage({ onBack, required = false, oauthError = false }: AuthPageProps) {
+export function AuthPage({ onBack, required = false, oauthError = false, forQuiz = false }: AuthPageProps) {
   const [busy,setBusy]=useState(false)
   const [error,setError]=useState(oauthError
     ? 'تسجيل الدخول عبر Google ما اكتملش. جرّب تاني من الزر اللي تحت.'
@@ -25,7 +26,7 @@ export function AuthPage({ onBack, required = false, oauthError = false }: AuthP
     setError('')
     setBusy(true)
     try {
-      await beginGoogleSignIn(window.location.origin)
+      await beginGoogleSignIn(window.location.origin,forQuiz)
       // Supabase redirects the browser to Google; sign-in finishes after return.
     }catch{
       setError('تعذّر فتح تسجيل الدخول بحساب Google. راجع الاتصال وحاول مرة تانية بعد شوية.')
@@ -42,10 +43,9 @@ export function AuthPage({ onBack, required = false, oauthError = false }: AuthP
       <div className="auth-card auth-google-card">
         <div className="auth-emblem"><UserRound size={25}/></div>
         <span className="section-kicker">مساحتك الشخصية في MindReset</span>
-        <h1>ابدأ بحسابك</h1>
+        <h1>{forQuiz?'سجّل دخولك عشان تبدأ الاختبار':'ابدأ بحسابك'}</h1>
         <p className="auth-description">
-          سجّل دخول أو اعمل حساب مجاني بنفس الزر. هتختار حساب Google وتكمل فورًا،
-          من غير كلمة مرور جديدة أو أكواد OTP من MindReset. لازم تدخل بحسابك الأول عشان تفتح الاختبار والمكتبة وخطتك.
+          {forQuiz?'بعد الدخول هترجع للاختبار مباشرة. التصفح والمكتبة متاحين من غير حساب؛ الاختبار وبياناتك الشخصية مرتبطين بحسابك.':'تقدر تتصفح الموقع والمكتبة من غير حساب. سجّل دخول أو اعمل حساب مجاني عشان تبدأ الاختبار وتتابع خطتك.'} هتختار حساب Google، من غير كلمة مرور جديدة أو أكواد OTP من MindReset.
         </p>
         {error && <div className="auth-message error" role="alert">{error}</div>}
         {!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
@@ -74,7 +74,7 @@ export function AuthPage({ onBack, required = false, oauthError = false }: AuthP
         <div className="auth-google-benefits">
           <span><ShieldCheck size={17}/> Google بيتحقق من حسابك بنفسه</span>
           <span><LockKeyhole size={17}/> مش بنستقبل كلمة مرور Google</span>
-          <span><Sparkles size={17}/> الاختبار وخطتك متاحين بعد الدخول</span>
+          <span><Sparkles size={17}/> التصفح متاح · الاختبار بعد الدخول</span>
         </div>
         <div className="auth-privacy">
           <ShieldCheck size={17}/>

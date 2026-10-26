@@ -1,3 +1,4 @@
+import { rememberQuizLogin } from './login-intent'
 import { authRedirectUrl } from './auth-urls'
 import { supabase } from './supabase'
 
@@ -14,8 +15,9 @@ export function googleOAuthRequest(origin: string) {
 }
 
 /** Supabase manages the PKCE verifier, state, and token exchange automatically. */
-export async function beginGoogleSignIn(origin: string): Promise<void> {
+export async function beginGoogleSignIn(origin: string, forQuiz=false): Promise<void> {
   if (!supabase) throw new Error('supabase-not-configured')
+  if(forQuiz)rememberQuizLogin()
   const { error } = await supabase.auth.signInWithOAuth(googleOAuthRequest(origin))
   if (error) throw error
 }
