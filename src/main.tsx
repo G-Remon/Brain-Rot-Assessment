@@ -1,3 +1,4 @@
+import { GuideDock } from './GuideDock'
 import { consumeLoginIntent } from './login-intent'
 import { VisitorJourney, VisitorTools } from './VisitorPages'
 import { UserGuide, ResultOrientation } from './UserGuide'
@@ -214,7 +215,7 @@ export function App() {
     catch { setFeedback('النسخ مش متاح في المتصفح ده. جرب مشاركة النتيجة.') }
   }
   return (
-    <AccountGate user={user} loading={authChecking} oauthError={oauthError} required={['quiz','results','admin'].includes(screen)} forQuiz={screen==='quiz'} onBack={()=>{consumeLoginIntent();setScreen('home')}}><ProProvider key={user?.id} owner={user?.id} onUpgrade={()=>{setScreen('tools');setShowMenu(false)}}><div className="app-shell"><AppMessages/>{user&&<NotificationCenter key={user.id} owner={user.id}/>}
+    <AccountGate user={user} loading={authChecking} oauthError={oauthError} required={['quiz','results','admin'].includes(screen)} forQuiz={screen==='quiz'} onBack={()=>{consumeLoginIntent();setScreen('home')}}><ProProvider key={user?.id} owner={user?.id} onUpgrade={()=>{setScreen('tools');setShowMenu(false)}}><div className="app-shell"><AppMessages/><GuideDock screen={screen} onGuide={()=>setScreen('guide')}/>{user&&<NotificationCenter key={user.id} owner={user.id}/>}
       <a className="skip-link" href="#main-content" onClick={event=>{event.preventDefault();document.getElementById('main-content')?.focus()}}>انتقل للمحتوى</a>
       <header className="site-header">
         <div className="container nav">
@@ -241,7 +242,6 @@ export function App() {
       </header>
       <main id="main-content" className={'main-content page-'+screen} tabIndex={-1}>
         {storageWarning&&<div className="container workspace-error" role="status">{storageWarning}</div>}
-        {!['home','auth','quiz','guide'].includes(screen)&&<div className="container context-wayfinding"><span>أنت الآن: {({results:'نتيجتي',journey:'خطتي',library:'مكتبة الحلول',tools:'أدواتي',account:'حسابي',science:'العلم والمصادر',admin:'الإدارة'} as Record<string,string>)[screen]??'MindReset'}</span><button onClick={()=>setScreen('guide')}>محتاج شرح؟ إرشادات الاستخدام</button></div>}
         {screen==='guide'&&<UserGuide hasResult={allAnswered} onQuiz={startQuiz} onResult={()=>setScreen('results')} onPlan={()=>setScreen('journey')}/>}
         {screen==='home' && <>
           <section className="hero container">
@@ -289,15 +289,17 @@ export function App() {
           <p className="quiz-bottom-note">خد وقتك. كل إجابة بتساعدنا نديك تحليل أقرب لعاداتك.</p>
         </section>}
         {screen==='results' && allAnswered && <div className="container results-page">
-          <div className="results-intro"><span className="section-kicker">خلصت! عاش إنك كملت 👏</span><h1>نتيجتك، بلغة واضحة.<br/><span className="highlight">وخطوة واحدة تبدأ بيها.</span></h1><p>النتيجة بتلخّص إجاباتك عن آخر 14 يوم، مش بتحدد ذكاءك أو «نسبة ضرر دماغك».</p></div>
-          <ResultOrientation answers={answers} onPlan={()=>setScreen('journey')} onGuide={()=>setScreen('guide')}/>
-          <div className="result-shortcuts"><button className="result-save-shortcut" onClick={openAccount}><LockKeyhole size={16}/>احفظ نسخة من نتيجتك · اختياري</button></div>
-          <nav className="report-navigation" aria-label="أقسام التقرير"><button onClick={()=>openReportSection('report-analysis')}>التحليل المفصّل</button><button onClick={()=>openReportSection('resources')}>الكتب والمصادر</button><button onClick={()=>setScreen('guide')}>شرح الدرجات والأدوات</button></nav>
+          <div className="results-intro"><span className="section-kicker">خلصت! عاش إنك كملت 👏</span><h1>نتيجتك</h1><p>النتيجة بتلخّص إجاباتك عن آخر 14 يوم، مش بتحدد ذكاءك أو «نسبة ضرر دماغك».</p></div>
           <div className="results-grid">
             <article className="score-card"><span className="card-eyebrow">مجموع مؤشرات الصعوبات في إجاباتك</span><div className="score-ring" style={{'--amount':`${score/120*100}%`} as CSSProperties}><div><strong>{score}</strong><span>من 120</span></div></div><p className="score-explanation"><strong>الأقل يعني صعوبات أقل، مش قدرة أقل.</strong></p><div className="band-pill">{band.title}</div><p>{band.note}</p><small>تصنيفات وصفية من تصميم الموقع، مش حدود تشخيصية معتمدة.</small></article>
             <article className="breakdown-card"><div className="card-heading"><h2>تفصيل المحاور</h2><span>0–20 · الأعلى = صعوبات أكثر</span></div>{ranked.map(d=><div className="score-line" key={d.id}><div className="score-name"><span><IconFor name={d.icon} size={17}/>{d.title}</span><b>{d.score}<small>/20</small></b></div><div className="bar-track"><span style={{width:`${d.score*5}%`}} className={d.score>=12?'bar-high':d.score>=7?'bar-mid':'bar-low'}/></div><p className="score-explanation"><span className={'score-status '+describeDomainScore(d.score).tone}>{describeDomainScore(d.score).label}</span> {domainGuidance[d.id].meaning}</p></div>)}</article>
           </div>
 
+          <div className="result-next-action"><p>الدرجة الأقل تعني صعوبات أقل في إجاباتك.<br/>جاهز تبدأ؟ خطوة واحدة من خطتك كفاية النهارده.</p><button className="btn btn-primary" onClick={()=>setScreen('journey')}>ابدأ بخطة الـ14 يوم <ArrowLeft size={17}/></button></div>
+          <div className="result-shortcuts"><button className="result-save-shortcut" onClick={openAccount}><LockKeyhole size={16}/>احفظ نسخة من نتيجتك · اختياري</button></div>
+          <nav className="report-navigation" aria-label="أقسام التقرير"><button onClick={()=>openReportSection('report-analysis')}>التحليل المفصّل</button><button onClick={()=>openReportSection('resources')}>الكتب والمصادر</button></nav>
+          <details className="guided-details" id="result-next-steps"><summary>افهم نتيجتك واختار أول خطوة<small>شرح إضافي حسب إجاباتك، افتحه وقت ما تحتاجه.</small></summary><div className="guided-details-body">
+          <ResultOrientation answers={answers} onPlan={()=>setScreen('journey')} onGuide={()=>setScreen('guide')}/>          </div></details>
           <details className="guided-details"><summary>أفكار إضافية لما تحتاجها<small>اختار فكرة واحدة؛ مش مطلوب تعملهم كلهم.</small></summary><section className="free-actions guided-details-body" id="free-actions"><div className="section-top"><span className="section-kicker">خطواتك الأولى</span><h2>3 خطوات تقدر تجربها</h2></div><div className="advice-grid">{suggestedSteps.map(step=><article className="advice-card" key={step.title}><h3>{step.title}</h3><p>{step.description}</p><div className="reading-next">{step.action}</div></article>)}</div></section></details>
           <details className="guided-details" id="report-analysis"><summary>افتح التحليل المفصّل لإجاباتك<small>تفسير كل إجابة والأنماط المشتركة، لو حابب تتعمّق.</small></summary><div className="guided-details-body"><ProBoundary title="افتح تفسير كل إجابة والأنماط المشتركة"><PremiumContent key={snapshotKey(answers)} kind="report" answers={answers}/></ProBoundary></div></details>
           <details className="guided-details" id="resources"><summary>فيديوهات وكتب ومصادر إضافية<small>اختياري. تقدر تبدأ خطتك من غير ما تقرأ أو تشوف كل ده.</small></summary><section className="more-help-section">

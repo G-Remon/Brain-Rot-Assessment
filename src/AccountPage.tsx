@@ -1,4 +1,3 @@
-import { SectionHelp } from './UserGuide'
 import { detachPersonalDevice } from './notification-center'
 import { confirmAction } from './app-messages'
 import { useEffect, useMemo, useState } from 'react'
@@ -190,7 +189,6 @@ export function AccountPage({user,onBack,onViewSaved,onJourney,currentCandidate,
       <div className="account-banner-icon"><ShieldCheck size={30}/><span>بيانات خاصة</span></div>
     </div>
 
-    <SectionHelp title="حسابي" purpose="هنا اسمك وسجل النتائج اللي اخترت تحفظها؛ التمارين والخطة متاحة من غير ما تحفظ نسخة من الاختبار." steps={['لو حابب ترجع للنتيجة بعدين، اختار حفظ نتيجتك الحالية.','افتح نتيجة من السجل لقراءة تحليلها، أو قارن النتائج الموجودة.','استخدم تعديل الاسم لتغيير الاسم الظاهر. بيانات الخطة والأدوات محفوظة بشكل مستقل عن سجل الاختبارات.']} finish="حفظ النتيجة اختياري، والإكمال لوحده مش بيضيف نسخة في سجل النتائج."/>
     <div className="account-profile-line">
       {!editingName ? <><span>الاسم الظاهر في حسابك: <strong>{readableName}</strong></span><button type="button" className="account-profile-edit-btn" disabled={!!pending} onClick={()=>{setDraftName(displayName);setEditingName(true)}}><Pencil size={15}/> تعديل الاسم</button></> :
       <div className="account-profile-form"><label htmlFor="account-edit-name">اسم الحساب</label><input id="account-edit-name" autoComplete="name" maxLength={80} value={draftName} onChange={event=>setDraftName(event.target.value)} disabled={!!pending}/><button type="button" disabled={!!pending} onClick={()=>void saveName()}>حفظ</button><button type="button" disabled={!!pending} onClick={()=>setEditingName(false)}>إلغاء</button></div>}

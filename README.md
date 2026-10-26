@@ -127,3 +127,7 @@ Plan, library, account and all six tool panels contain contextual instructions w
 ### Public browsing, account required for the quiz
 
 Visitors can browse the home page, guide, sources, all 36 exercises, and introductory plan/tool pages without authentication. Starting or deep-linking to the quiz requires a verified session; saved results, personal workspaces and administration remain protected. A short-lived per-tab navigation intent returns a visitor to the quiz after Google sign-in without changing the existing allowlisted callback URL. Public browsing never loads a previous user's local answers or writes over legacy guest answers. Authentication and database authorization rules are unchanged.
+
+### Guidance on demand
+
+The result score and domain breakdown now appear before help, shortcuts or optional reading. Personalized next-step explanations remain in a collapsed section below the score. A right-hand floating **إرشادات** button opens contextual help in a native dialog only when clicked. Repeated plan/library/account/tool instruction blocks were removed from page layouts; full instructions remain in the help dialog and `#/guide`. The existing notification control remains on the left, and the help button becomes a compact circle on small screens.

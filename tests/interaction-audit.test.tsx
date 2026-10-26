@@ -63,7 +63,7 @@ describe('actual application navigation and failure states',()=>{
  it('completes all 30 answers and opens the plan from the detailed report',async()=>{
   await render(<App/>);await click(button('الاختبار',host.querySelector('nav')!))
   for(let i=0;i<30;i++){await click(host.querySelectorAll<HTMLButtonElement>('.answer-option')[2]);await click(button(i===29?'شوف نتيجتك':'التالي'))}
-  expect(host.querySelector('.results-page')).not.toBeNull()
+  expect(host.querySelector('.results-page')).not.toBeNull();expect(host.querySelector('.results-grid')!.compareDocumentPosition(host.querySelector('.result-orientation')!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();expect(host.querySelector<HTMLDetailsElement>('#result-next-steps')?.open).toBe(false)
   await click(button('التحليل المفصّل',host.querySelector('.report-navigation')!));expect(host.querySelector('#analysis')?.closest('details')?.open).toBe(true)
   const link=host.querySelector<HTMLAnchorElement>('.report-lead a')!;expect(link.getAttribute('href')).toBe('#/journey')
   await click(link);expect(host.querySelector('.journey-workspace')).not.toBeNull()
@@ -72,11 +72,16 @@ describe('actual application navigation and failure states',()=>{
   localStorage.setItem('mindreset-assessment-v1:user:audit-owner',JSON.stringify(full));await render(<App/>);
   await click(button('إرشادات',host.querySelector('nav')!));expect(window.location.hash).toBe('#/guide');expect(host.querySelector('.user-guide')).not.toBeNull();
   await click(button('افهم نتيجتي'));expect(host.querySelector('.result-orientation')?.textContent).toContain('الدرجة الأقل = صعوبات أقل');
-  await click(button('ابدأ بخطة الـ14 يوم'));expect(window.location.hash).toBe('#/journey');expect(host.querySelector('.journey-workspace')).not.toBeNull();expect(host.querySelector('.section-help')).not.toBeNull();
+  await click(button('ابدأ بخطة الـ14 يوم'));expect(window.location.hash).toBe('#/journey');expect(host.querySelector('.journey-workspace')).not.toBeNull();expect(host.querySelector('.journey-workspace .section-help')).toBeNull();expect(host.querySelector('.guide-launcher')).not.toBeNull();
+ })
+ it('keeps guidance closed until requested and opens it without leaving the result',async()=>{
+  localStorage.setItem('mindreset-assessment-v1:user:audit-owner',JSON.stringify(full));window.history.replaceState(null,'','/#/results');await render(<App/>);
+  const dialog=host.querySelector<HTMLDialogElement>('.guide-dialog')!;expect(dialog.open).toBe(false);await click(host.querySelector<HTMLButtonElement>('.guide-launcher')!);expect(dialog.open).toBe(true);expect(dialog.textContent).toContain('6/20');expect(window.location.hash).toBe('#/results');
+  await click(host.querySelector<HTMLButtonElement>('.guide-dialog-close')!);expect(dialog.open).toBe(false);expect(host.querySelector('.score-card')).not.toBeNull();
  })
  it('includes optional result details when printing and restores the reading view afterward',async()=>{
   localStorage.setItem('mindreset-assessment-v1:user:audit-owner',JSON.stringify(full));window.history.replaceState(null,'','/#/results');await render(<App/>);
-  const details=[...host.querySelectorAll<HTMLDetailsElement>('details.guided-details')];expect(details.length).toBe(3);expect(details.every(d=>!d.open)).toBe(true);
+  const details=[...host.querySelectorAll<HTMLDetailsElement>('details.guided-details')];expect(details.length).toBe(4);expect(details.every(d=>!d.open)).toBe(true);
   await click(button('التحليل المفصّل',host.querySelector('.report-navigation')!));const openBefore=details.map(d=>d.open);
   window.dispatchEvent(new Event('beforeprint'));expect(details.every(d=>d.open)).toBe(true);window.dispatchEvent(new Event('afterprint'));expect(details.map(d=>d.open)).toEqual(openBefore);
  })
