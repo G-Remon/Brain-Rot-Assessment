@@ -1,3 +1,4 @@
+import { additionalExercises } from './additional-exercises'
 import { domains, domainScore, questions, type AnswerMap, type DomainId } from './data'
 import { validatedAssessment, snapshotKey } from './assessment-history'
 
@@ -11,7 +12,7 @@ export const journeySources = {
 export type Exercise = { id:string; domain:DomainId; title:string; description:string; steps:[string,string,string]; tiny:string; measure:string; source:keyof typeof journeySources; questions:string[] }
 // Original exercises, not quotations or prescribed treatments. Durations and combinations
 // are MindReset editorial choices, not protocols endorsed by the cited authors.
-export const exercises:Exercise[] = [
+const originalExercises:Exercise[] = [
   {id:'focus-space',domain:'focus',title:'مساحة لمهمة واحدة',description:'قلّل المقاطعات اللي تقدر تتحكم فيها قبل ما تبدأ.',steps:['اختار ناتجًا صغيرًا: فقرة، مسألة، أو جزء من شغلك.','حط الموبايل بعيد، وسيب نافذة المهمة بس مفتوحة؛ اسمح بالاتصالات الضرورية.','اشتغل على الجزء المحدد وسجّل عدد المرات اللي خرجت فيها عن المهمة.'],tiny:'دقيقتين على جزء صغير والموبايل بعيد عن إيدك.',measure:'عدد المقاطعات أثناء الجلسة.',source:'deep',questions:['f1','f3','f5']},
   {id:'focus-parking',domain:'focus',title:'ورقة للمشتتات',description:'خلي الفكرة الجانبية تستناك بدل ما تفتح لها تطبيق.',steps:['حط ورقة جنبك واكتب المهمة الحالية في أولها.','كل ما تحب تفتح حاجة جانبية، اكتبها بكلمتين وارجع للمهمة.','بعد الجلسة راجع الورقة واختار الضروري فقط.'],tiny:'اكتب مشتتًا واحدًا وارجع للسطر اللي كنت فيه.',measure:'عدد الرغبات اللي سجلتها بدل تنفيذها فورًا.',source:'deep',questions:['f1','f3','f4']},
   {id:'focus-ritual',domain:'focus',title:'ميعاد ثابت للبداية',description:'اربط البداية بإشارة بسيطة في يومك.',steps:['اختار إشارة موجودة فعلًا: بعد الفطار أو بعد ما تفتح اللابتوب.','جهّز المهمة من قبلها واكتب: بعد الإشارة هبدأ في الجزء ده.','نفّذ الجلسة وسجّل هل بدأت في الوقت اللي اخترته.'],tiny:'افتح الملف وحدد أول خطوة بعد إشارتك اليومية.',measure:'بدأت بعد الإشارة؟ نعم أو لا.',source:'atomic',questions:['f3','f5','i1']},
@@ -47,8 +48,9 @@ export const exercises:Exercise[] = [
 {"id": "sleep-pattern", "domain": "sleep", "title": "خريطة مساء من غير تخمين", "description": "لاحظ علاقة روتين المساء بالطاقة قبل ما تغيّر حاجات كتير.", "steps": ["سجّل عدة أيام وقت إنهاء الشغل والشاشة والنوم والاستيقاظ والطاقة باختيارك.", "اختار تغييرًا بسيطًا واحدًا في نهاية اليوم، مثل تجهيز احتياجات بكرة بعيدًا عن السرير.", "راجع أيامًا متشابهة؛ الملاحظات ما تثبتش السبب. لو صعوبة النوم مستمرة ومؤثرة اطلب تقييمًا مناسبًا."], "tiny": "سجّل موعد النوم والاستيقاظ ليوم واحد.", "measure": "نمط الروتين وإحساسك بالراحة، من غير تقليل وقت النوم.", "source": "sleep", "questions": ["n1", "n2", "n4"]},
 {"id": "sleep-boundary", "domain": "sleep", "title": "نهاية واضحة لليوم", "description": "جهّز انتقالًا عمليًا من المسؤوليات للراحة.", "steps": ["اكتب آخر مهمة ضرورية وحدّد نهاية مناسبة ليومك مع ترك وقت كافٍ للنوم.", "قبل النهاية جهّز مهمة بكرة والاتصالات الضرورية، ثم اختار نشاطًا هادئًا يناسبك.", "راجع العائق اللي أخّر نهاية اليوم وعدّل خطوة واحدة؛ ما تحوّلش النوم لمسابقة أرقام."], "tiny": "حضّر أول حاجة لبكرة واقفل مهمة واحدة.", "measure": "الفرق بين النهاية المخططة والفعلية ومدى مناسبة الروتين.", "source": "sleep", "questions": ["n2", "n3", "n5"]},
 {"id": "impact-obstacle", "domain": "impact", "title": "خطّة للعقبة قبل ما تحصل", "description": "حوّل الهدف لرد جاهز على أكتر عائق متكرر.", "steps": ["اكتب ناتج الأسبوع وأصغر خطوة له، ثم سمّي عائقًا حصل فعلًا قبل كده.", "اكتب قرارًا محددًا: لو حصل العائق، هعمل البديل الصغير في المكان والوقت دول.", "جرّب وراجع التنفيذ الفعلي؛ لو البديل صعب قلّل حجمه أو غيّر توقيته."], "tiny": "اكتب عائقًا وبديلًا قابلًا للتنفيذ.", "measure": "عدد المرات اللي نفذت فيها البديل عند ظهور العائق.", "source": "atomic", "questions": ["i1", "i4", "i5"]},
-{"id": "impact-review", "domain": "impact", "title": "مراجعة قرار مش محاكمة لنفسك", "description": "حلّل مهمة اتأجلت وابنِ تجربة أصغر للأسبوع الجاي.", "steps": ["اختار مسؤولية اتأجلت واكتب اللي حصل كوقائع من غير أحكام على نفسك.", "فرّق بين عائق وقت أو وضوح أو موارد، واختار عاملًا تقدر تغيّره.", "حدّد تجربة واحدة وناتجًا وموعد مراجعة، وقارن التنفيذ في المراجعة القادمة."], "tiny": "سمّي عائقًا واحدًا وأول فعل لتقليله.", "measure": "خطوة اتنفذت والعائق اللي اتغيّر فعلًا.", "source": "atomic", "questions": ["i1", "i2", "i5"]}
-]
+{"id": "impact-review", "domain": "impact", "title": "مراجعة قرار مش محاكمة لنفسك", "description": "حلّل مهمة اتأجلت وابنِ تجربة أصغر للأسبوع الجاي.", "steps": ["اختار مسؤولية اتأجلت واكتب اللي حصل كوقائع من غير أحكام على نفسك.", "فرّق بين عائق وقت أو وضوح أو موارد، واختار عاملًا تقدر تغيّره.", "حدّد تجربة واحدة وناتجًا وموعد مراجعة، وقارن التنفيذ في المراجعة القادمة."], "tiny": "سمّي عائقًا واحدًا وأول فعل لتقليله.", "measure": "خطوة اتنفذت والعائق اللي اتغيّر فعلًا.", "source": "atomic", "questions": ["i1", "i2", "i5"]},
+ ]
+export const exercises:Exercise[]=[...originalExercises,...additionalExercises]
 export const tracks = [
   {id:'focus',title:'تركيز لمهمة واحدة',description:'جلسات واضحة ومقاطعات أقل.',domains:['focus','impact']},
   {id:'scroll',title:'تصفح باختيارك',description:'فهم المحفزات وحدود تناسب يومك.',domains:['scroll','patience']},
@@ -85,7 +87,7 @@ export function selectedDomains(answers:AnswerMap,track:TrackId):DomainId[] {
 }
 export function matchingExercises(answers:AnswerMap,domain:DomainId) {
   const relevance=(e:Exercise)=>e.questions.filter(id=>answers[id]>=2).reduce((sum,id)=>sum+answers[id],0)
-  return exercises.filter(e=>e.domain===domain).sort((a,b)=>relevance(b)-relevance(a))
+  return originalExercises.filter(e=>e.domain===domain).sort((a,b)=>relevance(b)-relevance(a))
 }
 export type JourneyDay={day:number;title:string;minutes:number;steps:string[];tiny:string;measure:string;exerciseId?:string;source?:keyof typeof journeySources;phase:string}
 export function buildJourney(answers:AnswerMap,config:PlanConfig):{track:TrackId;reason:string;days:JourneyDay[]} {

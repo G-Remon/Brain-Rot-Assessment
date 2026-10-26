@@ -27,9 +27,9 @@ describe('journey matching',()=>{
     const a=answer({sleep:4});const p=buildJourney(a,{track:'learning',minutes:20,context:'work'})
     expect(p.track).toBe('learning');expect(p.days[1].steps.join(' ')).toContain('شغلك');expect(p.days.every(d=>d.minutes<=20)).toBe(true)
   })
-  it('has six distinct practical exercises per domain with source and measurements',()=>{
-    expect(new Set(exercises.map(e=>e.id)).size).toBe(36)
-    domains.forEach(d=>expect(exercises.filter(e=>e.domain===d.id)).toHaveLength(6))
+  it('has nine distinct practical exercises per domain with source and measurements',()=>{
+    expect(new Set(exercises.map(e=>e.id)).size).toBe(54)
+    domains.forEach(d=>expect(exercises.filter(e=>e.domain===d.id)).toHaveLength(9))
     exercises.forEach(e=>{expect(e.steps).toHaveLength(3);expect(e.measure).toBeTruthy();expect(e.tiny).toBeTruthy()})
   })
   it('handles 1000 diverse complete answer profiles consistently',()=>{

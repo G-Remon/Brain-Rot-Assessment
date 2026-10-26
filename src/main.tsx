@@ -8,7 +8,7 @@ import { trackUsage, useUsageAnalytics } from './usage-analytics'
 import { enqueueAssessmentEvent, useAssessmentEvents } from './assessment-events'
 import { AppMessages } from './app-messages'
 import { confirmAction } from './app-messages'
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { createRoot } from 'react-dom/client'
 import { Activity, ArrowLeft, ArrowRight, BookOpen, Check, CheckCircle2, ChevronLeft, Clock3, Copy, Download, ExternalLink, Heart, Lightbulb, LockKeyhole, Menu, Moon, RotateCcw, Share2, ShieldCheck, Smartphone, Sparkles, Target, X, BrainCircuit, Play, UserRound } from 'lucide-react'
@@ -29,6 +29,8 @@ import { clearGoogleRedirect, hasGoogleAuthError, isGoogleRedirect } from './aut
 import './style.css'
 import './ui-polish.css'
 
+const ArticlesPage=lazy(()=>import('./ArticlesPage').then(module=>({default:module.ArticlesPage})))
+const PracticePage=lazy(()=>import('./PracticePage').then(module=>({default:module.PracticePage})))
 type Screen = AppScreen
 const KEY = 'mindreset-assessment-v1'
 const steps = ['افهم عاداتك', 'شوف تحليلك', 'ابدأ بخطوة بسيطة']
@@ -230,6 +232,7 @@ export function App() {
             <button onClick={()=>{setScreen('journey');setShowMenu(false)}} aria-current={screen==='journey'?'page':undefined} className={screen==='journey'?'active':''}>خطتي</button>
             <button className={screen==='tools'?'active pro-nav':'pro-nav'} onClick={()=>{setScreen('tools');setShowMenu(false)}} aria-current={screen==='tools'?'page':undefined}>أدواتي</button>
             <button onClick={()=>{setScreen('guide');setShowMenu(false)}} aria-current={screen==='guide'?'page':undefined} className={screen==='guide'?'active':''}>إرشادات</button>
+            <button onClick={()=>{setScreen('articles');setShowMenu(false)}} aria-current={screen==='articles'?'page':undefined} className={screen==='articles'?'active':''}>مقالات</button>
             <AdminNavButton active={screen==='admin'} onClick={()=>{setScreen('admin');setShowMenu(false)}}/>
           </nav>
           <div className="nav-actions">
@@ -242,6 +245,8 @@ export function App() {
       </header>
       <main id="main-content" className={'main-content page-'+screen} tabIndex={-1}>
         {storageWarning&&<div className="container workspace-error" role="status">{storageWarning}</div>}
+        {screen==='articles'&&<Suspense fallback={<div className="container workspace-status" role="status">بنحمّل المقالات...</div>}><ArticlesPage/></Suspense>}
+        {screen==='practice'&&<Suspense fallback={<div className="container workspace-status" role="status">بنحمّل التدريب...</div>}><PracticePage key={user?.id??'guest'} owner={user?.id} answers={currentCandidate} onQuiz={startQuiz}/></Suspense>}
         {screen==='guide'&&<UserGuide hasResult={allAnswered} onQuiz={startQuiz} onResult={()=>setScreen('results')} onPlan={()=>setScreen('journey')}/>}
         {screen==='home' && <>
           <section className="hero container">
@@ -377,7 +382,7 @@ export function App() {
           <div className="science-bottom"><h2>خلينا نفهم عاداتك من غير أحكام.</h2><button className="btn btn-primary" onClick={startQuiz}>ابدأ الاختبار <ArrowLeft size={18}/></button></div>
         </div>}
       </main>
-      <footer className="footer"><div className="container footer-inner"><div className="footer-brand"><BrainCircuit size={21}/> <strong>mindreset</strong><span>افهم عاداتك. اختار براحتك.</span></div><div className="footer-links"><button onClick={()=>setScreen('guide')}>إرشادات الاستخدام</button><button onClick={()=>setScreen('science')}>العلم والمصادر</button><button onClick={()=>setScreen('home')}>الرئيسية</button><a href="/privacy.html">سياسة الخصوصية</a></div><div className="footer-credit"><p>تقييم ذاتي للتوعية فقط — مش تشخيص طبي. © {new Date().getFullYear()} MindReset</p><span>Developed by <strong>Gerges Remon</strong></span></div></div></footer>
+      <footer className="footer"><div className="container footer-inner"><div className="footer-brand"><BrainCircuit size={21}/> <strong>mindreset</strong><span>افهم عاداتك. اختار براحتك.</span></div><div className="footer-links"><button onClick={()=>setScreen('articles')}>مقالات عن التعفن</button><button onClick={()=>setScreen('practice')}>تدريبات MCQ</button><button onClick={()=>setScreen('guide')}>إرشادات الاستخدام</button><button onClick={()=>setScreen('science')}>العلم والمصادر</button><button onClick={()=>setScreen('home')}>الرئيسية</button><a href="/privacy.html">سياسة الخصوصية</a></div><div className="footer-credit"><p>تقييم ذاتي للتوعية فقط — مش تشخيص طبي. © {new Date().getFullYear()} MindReset</p><span>Developed by <strong>Gerges Remon</strong></span></div></div></footer>
     </div></ProProvider></AccountGate>
   )
 }

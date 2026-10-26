@@ -38,7 +38,7 @@ describe('actual application navigation and failure states',()=>{
  it('lets signed-out visitors browse real content and requires login only when starting the quiz',async()=>{
   mock.getUser.mockResolvedValue({data:{user:null},error:null});await render(<App/>);expect(host.querySelector('.hero')).not.toBeNull();
   for(const name of ['الحلول','خطتي','أدواتي','إرشادات'])await click(button(name,host.querySelector('nav')!));
-  await click(button('الحلول',host.querySelector('nav')!));expect(host.querySelectorAll('.solution-card')).toHaveLength(36);expect(host.textContent).not.toContain('تعذّر تحميل المحتوى');
+  await click(button('الحلول',host.querySelector('nav')!));expect(host.querySelectorAll('.solution-card')).toHaveLength(54);expect(host.textContent).not.toContain('تعذّر تحميل المحتوى');
   await click(button('الاختبار',host.querySelector('nav')!));expect(host.textContent).toContain('سجّل دخولك عشان تبدأ الاختبار');expect(host.querySelector('.answer-option')).toBeNull();
   await click(button('الرجوع للموقع'));expect(host.querySelector('.hero')).not.toBeNull();expect(mock.invoke).not.toHaveBeenCalled();
  })

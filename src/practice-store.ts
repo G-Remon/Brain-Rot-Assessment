@@ -1,0 +1,5 @@
+import {supabase} from './supabase'
+import {type PracticeAttempt,validAttempt} from './practice-model'
+async function verified(owner:string){if(!supabase)throw Error('login-required');const {data,error}=await supabase.auth.getUser();if(error||data.user?.id!==owner)throw Error('login-required')}
+export async function loadPracticeAttempts(owner:string):Promise<PracticeAttempt[]>{await verified(owner);const {data,error}=await supabase!.rpc('get_my_practice_progress');if(error||!Array.isArray(data))throw error??Error('invalid-practice-history');const values=data;if(!values.every(validAttempt))throw Error('invalid-practice-history');return values}
+export async function savePracticeAttempt(owner:string,attempt:PracticeAttempt){if(!validAttempt(attempt))throw Error('invalid-practice-attempt');await verified(owner);const {error}=await supabase!.from('practice_attempts').upsert({id:attempt.id,user_id:owner,domain:attempt.domain,level:attempt.level,correct:attempt.correct,total:attempt.total,bank_version:1},{onConflict:'id',ignoreDuplicates:true});if(error)throw error}

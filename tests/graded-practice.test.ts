@@ -1,0 +1,21 @@
+import {describe,it,expect} from 'vitest'
+import {domains,questions,type AnswerMap} from '../src/data'
+import {practiceBank} from '../src/practice-bank'
+import {practiceQuestions,unlockedLevel,percent,bestAttempts,type PracticeAttempt} from '../src/practice-model'
+import {trainingProfile} from '../src/training-profile'
+import {universityArticles} from '../src/university-articles'
+const empty=()=>Object.fromEntries(questions.map(q=>[q.id,0])) as AnswerMap
+const attempt=(domain:PracticeAttempt['domain'],level:PracticeAttempt['level'],correct:number):PracticeAttempt=>({id:crypto.randomUUID(),domain,level,correct,total:4,completedAt:new Date().toISOString()})
+describe('graded practice content and progression',()=>{
+ it('has 72 unique questions with one answer position and full explanations',()=>{expect(practiceBank).toHaveLength(72);expect(new Set(practiceBank.map(q=>q.id)).size).toBe(72);for(const q of practiceBank){expect(q.options).toHaveLength(4);expect(new Set(q.options).size).toBe(4);expect(q.answer).toBeGreaterThanOrEqual(0);expect(q.answer).toBeLessThan(4);expect(q.explanation.length).toBeGreaterThan(20);expect(q.stimulus.length).toBeGreaterThan(10)}})
+ it('covers all six domains and all three levels equally',()=>{for(const d of domains)for(const level of [1,2,3] as const)expect(practiceQuestions(d.id,level)).toHaveLength(4)})
+ it('keeps the correct answer after deterministic option rotation',()=>{expect(practiceBank.find(q=>q.id==='focus-2-3')?.options[practiceBank.find(q=>q.id==='focus-2-3')!.answer]).toBe('العنوان ثم الفقرة: 9 دقايق');expect(practiceBank.find(q=>q.id==='patience-3-1')?.options[practiceBank.find(q=>q.id==='patience-3-1')!.answer]).toBe('7')})
+ it('requires 75% in the preceding level and keeps domains independent',()=>{expect(unlockedLevel([], 'focus')).toBe(1);expect(unlockedLevel([attempt('focus',1,2)],'focus')).toBe(1);expect(unlockedLevel([attempt('focus',1,3)],'focus')).toBe(2);expect(unlockedLevel([attempt('focus',2,4)],'focus')).toBe(1);expect(unlockedLevel([attempt('focus',1,3),attempt('focus',2,3)],'focus')).toBe(3);expect(unlockedLevel([attempt('focus',1,4)],'memory')).toBe(1)})
+ it('retains a past best score after a poorer attempt',()=>{const first=attempt('focus',1,4),next=attempt('focus',1,1);expect(bestAttempts([first,next])).toHaveLength(1);expect(bestAttempts([first,next])[0].correct).toBe(4);expect(percent(3,4)).toBe(75)})
+ it('gives a different practical starting prescription for 25 and 52',()=>{const low=empty(),higher=empty();questions.slice(0,25).forEach(q=>low[q.id]=1);questions.forEach((q,i)=>higher[q.id]=i<22?2:1);const a=trainingProfile(low),b=trainingProfile(higher);expect(a.score).toBe(25);expect(b.score).toBe(52);expect(a.mode).toBe('maintain');expect(b.mode).toBe('gentle');expect(a.minutes).not.toBe(b.minutes);expect(a.action).not.toBe(b.action)})
+ it('uses individual axes so equal totals can need different exercise domains',()=>{const a=empty(),b=empty();questions.forEach(q=>{a[q.id]=q.domain==='focus'?3:q.domain==='impact'?2:0;b[q.id]=q.domain==='memory'?3:q.domain==='sleep'?2:0});expect(trainingProfile(a).score).toBe(25);expect(trainingProfile(b).score).toBe(25);expect(trainingProfile(a).domain).toBe('focus');expect(trainingProfile(b).domain).toBe('memory');expect(trainingProfile(a).mode).toBe('gentle')})
+})
+describe('university article provenance',()=>{
+ it('has eight original summaries from six named university sources',()=>{expect(universityArticles).toHaveLength(8);expect(new Set(universityArticles.map(a=>a.university)).size).toBe(6);expect(new Set(universityArticles.map(a=>a.id)).size).toBe(8)})
+ it('links only directly to verified university publishers and keeps summaries bounded',()=>{const hosts=['corp.oup.com','news.stanford.edu','www.health.harvard.edu','news.harvard.edu','openlearning.mit.edu','www.ox.ac.uk','www.ucl.ac.uk','news.northeastern.edu'];for(const a of universityArticles){const url=new URL(a.sourceUrl);expect(url.protocol).toBe('https:');expect(hosts).toContain(url.hostname);const text=[a.title,a.lede,...a.sections.flatMap(s=>[s.heading,s.body]),a.limit,a.takeaway,a.originalTitle,a.unit,a.sourceDate].join(' ');expect(text.split(/\s+/).length, a.id).toBeLessThanOrEqual(200);expect(a.limit.length).toBeGreaterThan(20)}})
+})

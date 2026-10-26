@@ -81,7 +81,7 @@ npm run preview
 
 ## All features are free
 
-All authenticated accounts can use detailed reports, the 36-exercise library, personal plans, full assessment history and comparisons, goals, focus, programs, habits, recall cards and reviews. No payment or subscription is required. Old `#/pro` and `#/upgrade` URLs redirect to `#/tools`.
+All authenticated accounts can use detailed reports, the 54-exercise library, personal plans, full assessment history and comparisons, goals, focus, programs, habits, recall cards and reviews. No payment or subscription is required. Old `#/pro` and `#/upgrade` URLs redirect to `#/tools`.
 
 Apply `docs/free-access-schema.sql` after the historical schema files. Legacy table and RPC names are retained for compatibility with existing data; RLS now checks ownership without paid entitlements. Admin access remains a separate private server-verified role. The dashboard lists registration metadata only, never personal answers or notes. Owner identities are provisioned privately and never committed.
 
@@ -126,8 +126,20 @@ Plan, library, account and all six tool panels contain contextual instructions w
 
 ### Public browsing, account required for the quiz
 
-Visitors can browse the home page, guide, sources, all 36 exercises, and introductory plan/tool pages without authentication. Starting or deep-linking to the quiz requires a verified session; saved results, personal workspaces and administration remain protected. A short-lived per-tab navigation intent returns a visitor to the quiz after Google sign-in without changing the existing allowlisted callback URL. Public browsing never loads a previous user's local answers or writes over legacy guest answers. Authentication and database authorization rules are unchanged.
+Visitors can browse the home page, guide, sources, all 54 exercises, and introductory plan/tool pages without authentication. Starting or deep-linking to the quiz requires a verified session; saved results, personal workspaces and administration remain protected. A short-lived per-tab navigation intent returns a visitor to the quiz after Google sign-in without changing the existing allowlisted callback URL. Public browsing never loads a previous user's local answers or writes over legacy guest answers. Authentication and database authorization rules are unchanged.
 
 ### Guidance on demand
 
 The result score and domain breakdown now appear before help, shortcuts or optional reading. Personalized next-step explanations remain in a collapsed section below the score. A right-hand floating **إرشادات** button opens contextual help in a native dialog only when clicked. Repeated plan/library/account/tool instruction blocks were removed from page layouts; full instructions remain in the help dialog and `#/guide`. The existing notification control remains on the left, and the help button becomes a compact circle on small screens.
+
+### Graded practice, personalized starts and university reading
+
+The library contains **54 original practical exercises** (nine per domain). Eighteen new exercises supplement the existing 36; the 14-day plan generator continues to use the original ordered pool so an existing saved plan's completed days and notes do not silently change exercises.
+
+`#/practice` contains **72 MCQs**, four per domain/level across six domains and three levels. Questions include stimulus filtering, rule following, recall, timing, interpretation and everyday decision scenarios. Answers are locked on confirmation and followed by the correct option and explanation. Three of four correct (75%) unlocks the next level for that domain. Training grades measure answers to these authored questions, not intelligence, medical recovery, or a validated cognitive outcome.
+
+Signed-in attempts store only domain, level, correct/total, bank edition and server timestamp in an owner-only RLS table. `get_my_practice_progress` returns the best result for every domain/level, so later lower scores cannot erase progress. Retry uses the same attempt UUID. Draft choices are kept in per-account session storage; guests can try locally without a cloud record. Change the bank edition if answer meanings change. Schema and rollback-only checks: `docs/practice-attempts-schema.sql`, `docs/verify-practice-progress.sql`.
+
+Exercise starting suggestions use both the complete assessment total and domain pattern. A low total without a high individual domain suggests maintenance; more frequent reported difficulties suggest a smaller starting version. These are editable activity suggestions, not diagnostic thresholds or ability rankings. Level progression is based on practice answers independently of assessment totals.
+
+`#/articles` presents **eight bounded Arabic editorial summaries from six university institutions/publishers**, with subject/institution filters and shareable `#/articles?read=<id>` links. Every article includes its source name, original title, date, original URL, limitations, and an explicit MindReset authorship/summary notice. No university endorsement, official Arabic translation, or comprehensive literature collection is claimed. Articles and the MCQ bank load on demand; React is separately cached.

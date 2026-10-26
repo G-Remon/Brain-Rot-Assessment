@@ -1,0 +1,23 @@
+begin;
+select set_config('mindreset.test_a',gen_random_uuid()::text,true),set_config('mindreset.test_b',gen_random_uuid()::text,true);
+insert into auth.users(id,email) values(current_setting('mindreset.test_a')::uuid,'practice-a-'||current_setting('mindreset.test_a')||'@example.invalid'),(current_setting('mindreset.test_b')::uuid,'practice-b-'||current_setting('mindreset.test_b')||'@example.invalid');
+insert into public.practice_attempts(id,user_id,domain,level,correct) values(gen_random_uuid(),current_setting('mindreset.test_b')::uuid,'focus',1,1);
+set local role authenticated;
+select set_config('request.jwt.claim.sub',current_setting('mindreset.test_a'),true);
+do $$declare attempt_id uuid:=gen_random_uuid();result jsonb;begin
+ insert into public.practice_attempts(id,user_id,domain,level,correct) values(attempt_id,auth.uid(),'focus',1,3);
+ insert into public.practice_attempts(id,user_id,domain,level,correct) values(attempt_id,auth.uid(),'focus',1,3) on conflict(id) do nothing;
+ insert into public.practice_attempts(id,user_id,domain,level,correct) values(gen_random_uuid(),auth.uid(),'focus',1,4);
+ insert into public.practice_attempts(id,user_id,domain,level,correct) values(gen_random_uuid(),auth.uid(),'focus',1,0);
+ result:=public.get_my_practice_progress();
+ if jsonb_array_length(result)<>1 or (result->0->>'correct')::integer<>4 then raise exception 'best score or owner isolation failed';end if;
+ if (select count(*) from public.practice_attempts)<>3 then raise exception 'idempotency or read isolation failed';end if;
+ begin insert into public.practice_attempts(id,user_id,domain,level,correct) values(gen_random_uuid(),current_setting('mindreset.test_b')::uuid,'focus',1,4);raise exception 'foreign insert accepted';exception when insufficient_privilege then null;end;
+ begin update public.practice_attempts set correct=4;raise exception 'update accepted';exception when insufficient_privilege then null;end;
+ begin insert into public.practice_attempts(id,user_id,domain,level,correct,completed_at) values(gen_random_uuid(),auth.uid(),'focus',1,4,'2000-01-01');raise exception 'forged timestamp accepted';exception when insufficient_privilege then null;end;
+end $$;
+set local role anon;
+do $$begin begin perform public.get_my_practice_progress();raise exception 'anonymous progress accepted';exception when insufficient_privilege then null;end;end $$;
+reset role;
+select 'PASS: own-only reads/writes, best score retained, duplicate attempt ignored, foreign writes/updates/forged time/anonymous access denied; rollback' as verification;
+rollback;
